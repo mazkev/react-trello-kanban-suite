@@ -1,90 +1,147 @@
-import { LayoutTemplate, ArrowRight } from 'lucide-react';
-import { useBoardStore } from '../store/useBoardStore';
 import { useState } from 'react';
+import { ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useBoardStore } from '../store/useBoardStore';
 
 export default function Login() {
-  const setAppMode = useBoardStore(state => state.setAppMode);
-  const setCurrentUser = useBoardStore(state => state.setCurrentUser);
+  const setAppMode = useBoardStore(s => s.setAppMode);
+  const setCurrentUser = useBoardStore(s => s.setCurrentUser);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [step, setStep] = useState('email'); // 'email' | 'password'
 
-  const handleLogin = (e) => {
+  const handleContinue = (e) => {
     e.preventDefault();
-    if (email) {
-      // Derive name from email (e.g. "john.doe@email.com" -> "John Doe")
+    if (step === 'email' && email.trim()) {
+      setStep('password');
+    } else if (step === 'password') {
       const namePart = email.split('@')[0];
-      const formattedName = namePart.split('.').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
-      setCurrentUser({ name: formattedName || 'User', email });
+      const name = namePart.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+      setCurrentUser({ name: name || 'User', email });
+      setAppMode('dashboard');
     }
-    setAppMode('dashboard');
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-x-hidden bg-[#0f172a] font-sans py-12">
-      {/* Background with abstract shapes */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 blur-[120px] rounded-full mix-blend-screen" />
-      </div>
-
-      <div className="relative z-10 w-full max-w-md px-4">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-3 text-3xl font-bold tracking-tight mb-8">
-          <div className="bg-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20">
-            <LayoutTemplate className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-[#F1F2F4] flex flex-col items-center justify-center px-4 py-12 font-sans">
+      {/* Logo */}
+      <div className="flex items-center gap-2 mb-8">
+        <div className="w-9 h-9 bg-[#0052CC] rounded-lg flex items-center justify-center">
+          <div className="flex gap-0.5">
+            <div className="w-2.5 h-7 bg-white rounded-sm" />
+            <div className="w-2.5 h-5 bg-white rounded-sm" />
           </div>
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Glass Elite</span>
         </div>
+        <span className="text-2xl font-extrabold text-[#172B4D] tracking-tight">Trello</span>
+      </div>
 
-        {/* Login Card */}
-        <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-           
-           <h2 className="text-2xl font-bold text-white mb-8 text-center">Log in to continue</h2>
-           
-           <form 
-            className="space-y-5"
-            onSubmit={handleLogin}
-           >
-             <div>
-               <label className="block text-[11px] font-bold uppercase tracking-widest text-white/50 mb-2">Email address</label>
-               <input 
-                 type="email" 
-                 required
-                 value={email}
-                 onChange={(e) => setEmail(e.target.value)}
-                 placeholder="Enter your email" 
-                 className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-black/30 transition-all text-sm"
-               />
-             </div>
-             <div>
-               <div className="flex justify-between items-center mb-2">
-                 <label className="block text-[11px] font-bold uppercase tracking-widest text-white/50">Password</label>
-                 <a href="#" className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors">Forgot password?</a>
-               </div>
-               <input 
-                 type="password" 
-                 required
-                 placeholder="Enter password" 
-                 className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-black/30 transition-all text-sm"
-               />
-             </div>
-             
-             <button 
-               type="submit"
-               className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-4 font-bold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] mt-6 flex items-center justify-center gap-2 group"
-             >
-               Continue <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-             </button>
-           </form>
-           
-           <div className="mt-8 pt-6 border-t border-white/10 text-center text-sm text-white/50">
-             <span>Don't have an account? </span>
-             <button onClick={() => setAppMode('landing')} className="font-semibold text-white hover:text-blue-400 transition-colors">
-               Sign up
-             </button>
-           </div>
+      {/* Card */}
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-md border border-gray-200 p-8">
+        <h1 className="text-xl font-bold text-[#172B4D] text-center mb-1">Log in to Trello</h1>
+        <p className="text-sm text-[#44546F] text-center mb-7">
+          {step === 'password' ? `Logging in as ${email}` : 'Continue to your workspace'}
+        </p>
+
+        <form onSubmit={handleContinue} className="space-y-4">
+          {/* Google / Microsoft SSO (decorative) */}
+          {step === 'email' && (
+            <>
+              <button type="button" className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-md py-2.5 text-sm font-medium text-[#172B4D] hover:bg-gray-50 transition-colors">
+                <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" />
+                Continue with Google
+              </button>
+              <button type="button" className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-md py-2.5 text-sm font-medium text-[#172B4D] hover:bg-gray-50 transition-colors">
+                <img src="https://www.microsoft.com/favicon.ico" className="w-4 h-4" alt="Microsoft" />
+                Continue with Microsoft
+              </button>
+
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-xs text-gray-400 font-medium">Or continue with</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+            </>
+          )}
+
+          {/* Email */}
+          {step === 'email' && (
+            <div>
+              <label className="block text-xs font-semibold text-[#172B4D] mb-1.5">Email</label>
+              <input
+                type="email"
+                required
+                autoFocus
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#0052CC] focus:border-[#0052CC] transition-all placeholder-gray-400"
+              />
+            </div>
+          )}
+
+          {/* Password */}
+          {step === 'password' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-[#172B4D]">Password</label>
+                <button type="button" className="text-xs text-[#0052CC] hover:underline font-medium">
+                  Forgot password?
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  required
+                  autoFocus
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2.5 pr-10 text-sm text-[#172B4D] focus:outline-none focus:ring-2 focus:ring-[#0052CC] focus:border-[#0052CC] transition-all placeholder-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                >
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full flex items-center justify-center gap-2 bg-[#0052CC] hover:bg-[#0065FF] text-white font-bold py-2.5 rounded-md transition-colors text-sm group shadow-sm"
+          >
+            {step === 'email' ? 'Continue' : 'Log in'}
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </form>
+
+        {step === 'password' && (
+          <button
+            onClick={() => setStep('email')}
+            className="w-full text-center text-sm text-[#0052CC] hover:underline mt-3 font-medium"
+          >
+            ← Use a different email
+          </button>
+        )}
+
+        <div className="mt-7 pt-5 border-t border-gray-200 text-center">
+          <p className="text-sm text-[#44546F]">
+            Don't have an account?{' '}
+            <button onClick={() => setAppMode('landing')} className="text-[#0052CC] font-bold hover:underline">
+              Sign up for free
+            </button>
+          </p>
         </div>
       </div>
+
+      <p className="text-xs text-gray-400 mt-6 text-center max-w-xs">
+        By signing in, you agree to our{' '}
+        <a href="#" className="underline hover:text-gray-600">Terms of Service</a> and{' '}
+        <a href="#" className="underline hover:text-gray-600">Privacy Policy</a>.
+      </p>
     </div>
   );
 }
