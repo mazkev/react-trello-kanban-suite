@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useBoardStore } from '../store/useBoardStore';
 import { 
-  X, User, Shield, Palette, Server, Check, 
-  AlertCircle, Key, Trash2, Sparkles, RefreshCw, LogOut 
+  X, User, Shield, Palette, Check, 
+  AlertCircle, Key, Trash2, Sparkles, RefreshCw, LogOut, Info
 } from 'lucide-react';
 
 const BACKGROUNDS = [
@@ -173,7 +173,7 @@ export default function SettingsModal() {
                 : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}
           >
-            <Server className="w-4 h-4" /> Sistem & Server
+            <Info className="w-4 h-4" /> Tentang Aplikasi
           </button>
         </div>
 
@@ -363,49 +363,48 @@ export default function SettingsModal() {
             </div>
           )}
 
-          {/* TAB 3: SYSTEM & BACKEND */}
+          {/* TAB 3: ABOUT & SYSTEM STATUS */}
           {activeTab === 'system' && (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-sm font-bold text-gray-800">Status Server REST API</span>
+                    <span className="text-sm font-bold text-gray-800">Status Layanan & Sinkronisasi</span>
                   </div>
                   <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">
-                    Terhubung (Healthy)
+                    Semua Sistem Normal
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 text-xs text-gray-600 border-t border-gray-200">
                   <div>
-                    <span className="text-gray-400 block font-mono">Backend Endpoint</span>
-                    <span className="font-semibold text-gray-800">http://localhost:8080</span>
+                    <span className="text-gray-400 block font-medium">Versi Rilis</span>
+                    <span className="font-semibold text-gray-800">v1.2.0 (Stable)</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block font-mono">Arsitektur</span>
-                    <span className="font-semibold text-gray-800">Go Clean Architecture</span>
+                    <span className="text-gray-400 block font-medium">Platform</span>
+                    <span className="font-semibold text-gray-800">Kanban Workspace Suite</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block font-mono">Database</span>
-                    <span className="font-semibold text-gray-800">SQLite (ecommerce.db)</span>
+                    <span className="text-gray-400 block font-medium">Keamanan Akun</span>
+                    <span className="font-semibold text-gray-800">Terenkripsi Standar Industri</span>
                   </div>
                   <div>
-                    <span className="text-gray-400 block font-mono">Autentikasi</span>
-                    <span className="font-semibold text-gray-800">JWT + Bcrypt Hash</span>
+                    <span className="text-gray-400 block font-medium">Penyimpanan</span>
+                    <span className="font-semibold text-gray-800">Tersinkronisasi Otomatis</span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                <h4 className="text-xs font-bold text-blue-900 mb-1">Fitur Tersinkronisasi</h4>
-                <ul className="text-xs text-blue-700 space-y-1 list-disc list-inside">
-                  <li>Manajemen Board (Tambah, Edit Nama, Hapus Board)</li>
-                  <li>Manajemen Kolom (Tambah, Rename, Urutkan/Move, Hapus Kolom)</li>
-                  <li>Manajemen Kartu Tugas (Cover, Deskripsi, Drag & Drop pindah kolom)</li>
-                  <li>Sub-Tugas / Checklist (Tambah, Toggle centang, Hapus)</li>
-                  <li>Profil & Pengaturan Akun (Nama & Password terenkripsi)</li>
-                </ul>
+              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-2">
+                <h4 className="text-xs font-bold text-blue-900">Perlindungan & Keamanan Data</h4>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  Semua data proyek, pembagian kartu tugas, lampiran, dan informasi akun Anda dilindungi dengan enkripsi menyeluruh untuk menjaga privasi kerja tim Anda.
+                </p>
+                <div className="pt-2 border-t border-blue-200/60 text-[11px] text-blue-600 font-medium">
+                  © 2026 Trello Kanban Suite. Hak cipta dilindungi undang-undang.
+                </div>
               </div>
             </div>
           )}

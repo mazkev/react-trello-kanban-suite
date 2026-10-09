@@ -491,9 +491,9 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
                 </div>
               </div>
               <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-                <span>Backend REST API</span>
-                <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> localhost:8080
+                <span>Versi Aplikasi</span>
+                <span className="text-gray-700 font-semibold flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> v1.2.0 Stable
                 </span>
               </div>
             </div>

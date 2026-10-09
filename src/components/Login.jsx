@@ -44,7 +44,7 @@ export default function Login() {
           setAppMode('dashboard');
         }
       } catch (err) {
-        setErrorMsg(err.message || 'Gagal login. Pastikan server Go di :8080 aktif.');
+        setErrorMsg(err.message || 'Gagal login. Silakan periksa kembali email dan password Anda.');
       } finally {
         setLoading(false);
       }
@@ -70,7 +70,7 @@ export default function Login() {
           {isRegisterMode ? 'Buat Akun Trello Baru' : 'Masuk ke Trello'}
         </h1>
         <p className="text-sm text-[#44546F] text-center mb-6">
-          {step === 'password' ? `Lanjutkan sebagai ${email}` : 'Terhubung langsung ke Backend Go (Port 8080)'}
+          {step === 'password' ? `Lanjutkan sebagai ${email}` : 'Kelola proyek dan tugas tim Anda'}
         </p>
 
         {errorMsg && (
