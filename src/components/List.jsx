@@ -42,7 +42,7 @@ export default function List({ list, index }) {
   }, []);
 
   const searchQuery = useBoardStore(s => s.searchQuery);
-  const filteredCards = list.cards.filter(card => {
+  const filteredCards = (list.cards || []).filter(card => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return card.content.toLowerCase().includes(q) || (card.description?.toLowerCase().includes(q));
@@ -69,7 +69,7 @@ export default function List({ list, index }) {
   };
 
   return (
-    <Draggable draggableId={list.id} index={index} isDragDisabled={isDragDisabled}>
+    <Draggable draggableId={String(list.id)} index={index} isDragDisabled={isDragDisabled}>
       {(provided, snapshot) => (
         <div
           ref={provided.innerRef}
@@ -154,7 +154,7 @@ export default function List({ list, index }) {
           </div>
 
           {/* Cards */}
-          <Droppable droppableId={list.id} type="card" isDropDisabled={isDragDisabled}>
+          <Droppable droppableId={String(list.id)} type="card" isDropDisabled={isDragDisabled}>
             {(provided, snapshot) => (
               <div
                 ref={provided.innerRef}

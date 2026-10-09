@@ -6,8 +6,8 @@ import { useBoardStore } from '../store/useBoardStore';
 
 export default function Board() {
   const lists = useBoardStore((state) => {
-    const activeBoard = state.boards.find(b => b.id === state.activeBoardId);
-    return activeBoard ? activeBoard.lists : [];
+    const activeBoard = state.boards.find(b => b.id == state.activeBoardId);
+    return activeBoard ? (activeBoard.lists || []) : [];
   });
   const addList = useBoardStore(s => s.addList);
   const moveList = useBoardStore(s => s.moveList);

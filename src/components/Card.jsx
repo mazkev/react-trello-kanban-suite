@@ -51,7 +51,7 @@ export default function Card({ card, index, listId, isDragDisabled }) {
 
   return (
     <>
-      <Draggable draggableId={card.id} index={index} isDragDisabled={isDragDisabled}>
+      <Draggable draggableId={String(card.id)} index={index} isDragDisabled={isDragDisabled}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}

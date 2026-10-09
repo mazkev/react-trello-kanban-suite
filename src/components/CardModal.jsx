@@ -6,6 +6,7 @@ import {
   Activity, LayoutTemplate, ChevronDown
 } from 'lucide-react';
 import { useBoardStore } from '../store/useBoardStore';
+import { api } from '../services/api';
 
 const LABEL_OPTIONS = [
   { key: 'bg-green-500',  hex: '#4BCE97', name: 'Green' },
@@ -44,8 +45,8 @@ export default function CardModal({ listId, card, onClose }) {
   const currentUser = useBoardStore(s => s.currentUser);
 
   // Find list title
-  const activeBoard = boards.find(b => b.id === activeBoardId);
-  const listTitle = activeBoard?.lists.find(l => l.id === listId)?.title || listId;
+  const activeBoard = boards.find(b => b.id == activeBoardId);
+  const listTitle = activeBoard?.lists?.find(l => l.id == listId)?.title || listId;
 
   const [content, setContent] = useState(card.content);
   const [description, setDescription] = useState(card.description || '');
@@ -76,14 +77,48 @@ export default function CardModal({ listId, card, onClose }) {
     }
   };
 
-  const addChecklistItem = () => {
+  const addChecklistItem = async () => {
     if (newItem.trim()) {
-      setChecklist(prev => [...prev, { title: newItem.trim(), checked: false }]);
+      const title = newItem.trim();
       setNewItem('');
+      try {
+        const res = await api.createChecklistItem(card.id, title);
+        if (res?.data) {
+          setChecklist(prev => [...prev, res.data]);
+          return;
+        }
+      } catch (err) {
+        console.warn('Checklist create fallback:', err);
+      }
+      setChecklist(prev => [...prev, { title, checked: false }]);
     }
   };
-  const toggleItem = (i) => setChecklist(prev => prev.map((item, idx) => idx === i ? { ...item, checked: !item.checked } : item));
-  const removeItem = (i) => setChecklist(prev => prev.filter((_, idx) => idx !== i));
+
+  const toggleItem = async (i) => {
+    const target = checklist[i];
+    if (!target) return;
+    const newChecked = !target.checked;
+    setChecklist(prev => prev.map((item, idx) => idx === i ? { ...item, checked: newChecked } : item));
+    if (target.id) {
+      try {
+        await api.updateChecklistItem(target.id, target.title || '', newChecked);
+      } catch (err) {
+        console.error('Checklist toggle error:', err);
+      }
+    }
+  };
+
+  const removeItem = async (i) => {
+    const target = checklist[i];
+    setChecklist(prev => prev.filter((_, idx) => idx !== i));
+    if (target?.id) {
+      try {
+        await api.deleteChecklistItem(target.id);
+      } catch (err) {
+        console.error('Checklist delete error:', err);
+      }
+    }
+  };
 
   const checklistCount = checklist.length;
   const checklistChecked = checklist.filter(c => c.checked).length;

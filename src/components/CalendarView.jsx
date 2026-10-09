@@ -7,12 +7,12 @@ export default function CalendarView() {
   const skin = useBoardStore((state) => state.skin);
   const isLight = skin === 'light';
 
-  const activeBoard = boards.find(b => b.id === activeBoardId);
+  const activeBoard = boards.find(b => b.id == activeBoardId);
   const lists = activeBoard?.lists || [];
 
   // Flatten all cards that have a dueDate
   const cardsWithDates = lists.flatMap(list => 
-    list.cards.filter(c => c.dueDate).map(card => ({ ...card, listTitle: list.title }))
+    (list.cards || []).filter(c => c.dueDate).map(card => ({ ...card, listTitle: list.title }))
   ).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
   const textMuted = isLight ? 'text-gray-500' : 'text-white/60';

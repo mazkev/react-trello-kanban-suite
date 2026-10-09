@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Search, Bell, HelpCircle, Settings, ChevronDown,
   LayoutDashboard, Zap, BarChart3, Calendar, Menu, X,
-  Plus, LayoutTemplate
+  Plus, LayoutTemplate, Edit2, Trash2, LogOut
 } from 'lucide-react';
 import Board from './components/Board';
 import Statistics from './components/Statistics';
@@ -178,9 +178,14 @@ function WorkspaceSidebar({ isOpen, onClose }) {
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const setActiveBoard = useBoardStore(s => s.setActiveBoard);
   const createBoard = useBoardStore(s => s.createBoard);
+  const renameBoard = useBoardStore(s => s.renameBoard);
+  const deleteBoard = useBoardStore(s => s.deleteBoard);
   const currentUser = useBoardStore(s => s.currentUser);
   const theme = useBoardStore(s => s.theme);
   const setTheme = useBoardStore(s => s.setTheme);
+
+  const [editingBoardId, setEditingBoardId] = useState(null);
+  const [editBoardTitle, setEditBoardTitle] = useState('');
 
   const navItems = [
     { id: 'board', icon: <LayoutDashboard className="w-4 h-4" />, label: 'Boards' },
@@ -256,18 +261,70 @@ function WorkspaceSidebar({ isOpen, onClose }) {
             </div>
 
             {boards.map(board => (
-              <button
+              <div
                 key={board.id}
                 onClick={() => { setActiveBoard(board.id); setCurrentView('board'); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-0.5 ${
-                  activeBoardId === board.id && currentView === 'board'
+                className={`group w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors mb-0.5 cursor-pointer ${
+                  activeBoardId == board.id && currentView === 'board'
                     ? 'bg-[#E9F2FF] text-[#0052CC]'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className={`w-6 h-5 rounded bg-gradient-to-br ${board.color} shrink-0 shadow-sm`} />
-                <span className="truncate">{board.title}</span>
-              </button>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <span className={`w-6 h-5 rounded bg-gradient-to-br ${board.color} shrink-0 shadow-sm`} />
+                  {editingBoardId == board.id ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editBoardTitle}
+                      onChange={e => setEditBoardTitle(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      onBlur={() => {
+                        if (editBoardTitle.trim()) renameBoard(board.id, editBoardTitle.trim());
+                        setEditingBoardId(null);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          if (editBoardTitle.trim()) renameBoard(board.id, editBoardTitle.trim());
+                          setEditingBoardId(null);
+                        }
+                        if (e.key === 'Escape') setEditingBoardId(null);
+                      }}
+                      className="flex-1 bg-white border border-[#0052CC] rounded px-1.5 py-0.5 text-xs text-gray-800 outline-none"
+                    />
+                  ) : (
+                    <span className="truncate">{board.title}</span>
+                  )}
+                </div>
+
+                {editingBoardId != board.id && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingBoardId(board.id);
+                        setEditBoardTitle(board.title);
+                      }}
+                      title="Rename board"
+                      className="p-1 rounded hover:bg-gray-200 text-gray-500 hover:text-blue-600 transition-colors"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Hapus board "${board.title}" beserta seluruh kolom dan kartunya?`)) {
+                          deleteBoard(board.id);
+                        }
+                      }}
+                      title="Hapus board ini"
+                      className="p-1 rounded hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
 
             <button
@@ -322,14 +379,20 @@ function Dashboard() {
   const view = useBoardStore(s => s.currentView);
   const boards = useBoardStore(s => s.boards);
   const activeBoardId = useBoardStore(s => s.activeBoardId);
+  const fetchBoards = useBoardStore(s => s.fetchBoards);
+  const renameBoard = useBoardStore(s => s.renameBoard);
+  const deleteBoard = useBoardStore(s => s.deleteBoard);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [editingHeaderTitle, setEditingHeaderTitle] = useState(false);
+  const [headerTitle, setHeaderTitle] = useState('');
+  const [isStarred, setIsStarred] = useState(false);
 
-  const activeBoard = boards.find(b => b.id === activeBoardId);
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+
+  const activeBoard = boards.find(b => b.id == activeBoardId);
   const bg = BG_MAP[theme] || BG_MAP['blue'];
-
-  const boardBgStyle = bg.type === 'color'
-    ? { style: bg.css ? { cssText: bg.css } : {} }
-    : {};
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -348,33 +411,74 @@ function Dashboard() {
         >
           {/* Board Sub-header */}
           {view === 'board' && (
-            <div className="board-header">
-              <h1 className="text-white font-bold text-base">{activeBoard?.title || 'Board'}</h1>
-              <div className="w-px h-5 bg-white/30 mx-1" />
-              <button className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3">
-                <span>⭐</span> Star
-              </button>
-              <div className="flex-1" />
-              <button className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3">
-                <LayoutTemplate className="w-4 h-4" /> Power-Ups
-              </button>
-              <button className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3">
-                <Zap className="w-4 h-4" /> Automation
-              </button>
-              <div className="w-px h-5 bg-white/30 mx-1" />
-              <div className="flex items-center gap-1">
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user1&backgroundColor=b6e3f4`}
-                  className="w-7 h-7 rounded-full border-2 border-white/60"
-                  alt="member"
-                />
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user2&backgroundColor=ffdfbf`}
-                  className="w-7 h-7 rounded-full border-2 border-white/60 -ml-2"
-                  alt="member"
-                />
+            <div className="board-header flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {editingHeaderTitle ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={headerTitle}
+                    onChange={e => setHeaderTitle(e.target.value)}
+                    onBlur={() => {
+                      if (headerTitle.trim() && activeBoard) {
+                        renameBoard(activeBoard.id, headerTitle.trim());
+                      }
+                      setEditingHeaderTitle(false);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        if (headerTitle.trim() && activeBoard) {
+                          renameBoard(activeBoard.id, headerTitle.trim());
+                        }
+                        setEditingHeaderTitle(false);
+                      }
+                      if (e.key === 'Escape') setEditingHeaderTitle(false);
+                    }}
+                    className="bg-white/20 text-white font-bold text-base px-2 py-0.5 rounded outline-none border border-white/50"
+                  />
+                ) : (
+                  <h1
+                    onClick={() => {
+                      if (activeBoard) {
+                        setHeaderTitle(activeBoard.title);
+                        setEditingHeaderTitle(true);
+                      }
+                    }}
+                    title="Klik untuk rename judul board"
+                    className="text-white font-bold text-base cursor-pointer hover:bg-white/20 px-2 py-0.5 rounded transition-colors"
+                  >
+                    {activeBoard?.title || 'Board'}
+                  </h1>
+                )}
+                <div className="w-px h-5 bg-white/30 mx-1" />
+                <button
+                  onClick={() => setIsStarred(!isStarred)}
+                  className={`trello-btn text-sm flex items-center gap-1.5 h-8 px-3 ${isStarred ? 'bg-yellow-400/40 text-yellow-200' : ''}`}
+                >
+                  <span>{isStarred ? '⭐' : '☆'}</span> {isStarred ? 'Starred' : 'Star'}
+                </button>
               </div>
-              <button className="trello-btn text-sm h-8 px-3">+ Share</button>
+
+              <div className="flex items-center gap-2">
+                <button className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3">
+                  <LayoutTemplate className="w-4 h-4" /> Power-Ups
+                </button>
+                <button className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3">
+                  <Zap className="w-4 h-4" /> Automation
+                </button>
+                <div className="w-px h-5 bg-white/30 mx-1" />
+                <button
+                  onClick={() => {
+                    if (activeBoard && window.confirm(`Hapus board "${activeBoard.title}" beserta seluruh kolom dan kartunya?`)) {
+                      deleteBoard(activeBoard.id);
+                    }
+                  }}
+                  title="Hapus board ini"
+                  className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3 text-red-200 hover:text-white hover:bg-red-600/80 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Delete Board
+                </button>
+              </div>
             </div>
           )}
 

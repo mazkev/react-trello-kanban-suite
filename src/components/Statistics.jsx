@@ -26,16 +26,16 @@ function StatCard({ icon, label, value, color }) {
 
 export default function Statistics() {
   const lists = useBoardStore((state) => {
-    const activeBoard = state.boards.find(b => b.id === state.activeBoardId);
-    return activeBoard ? activeBoard.lists : [];
+    const activeBoard = state.boards.find(b => b.id == state.activeBoardId);
+    return activeBoard ? (activeBoard.lists || []) : [];
   });
 
-  const totalCards = lists.reduce((acc, list) => acc + list.cards.length, 0);
-  const completedCards = lists.reduce((acc, list) => acc + list.cards.filter(c => c.checked).length, 0);
+  const totalCards = lists.reduce((acc, list) => acc + (list.cards || []).length, 0);
+  const completedCards = lists.reduce((acc, list) => acc + (list.cards || []).filter(c => c.checked).length, 0);
   const completionRate = totalCards === 0 ? 0 : Math.round((completedCards / totalCards) * 100);
 
   const labelCounts = {};
-  lists.forEach(list => list.cards.forEach(card => {
+  lists.forEach(list => (list.cards || []).forEach(card => {
     if (card.label) labelCounts[card.label] = (labelCounts[card.label] || 0) + 1;
   }));
 

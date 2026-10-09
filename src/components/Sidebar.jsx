@@ -50,13 +50,13 @@ export default function Sidebar({ isOpen, onClose }) {
       <div className={`p-5 flex items-center justify-between border-b ${isLight ? 'border-gray-200' : 'border-white/10'}`}>
         <div className="flex items-center gap-3 min-w-0">
           <img 
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`} 
+            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'User'}`} 
             alt="User avatar" 
             className={`w-10 h-10 rounded-full border-2 cursor-pointer transition-colors ${isLight ? 'border-gray-300 bg-gray-100' : 'border-white/20 bg-white/10'}`}
           />
           <div className="flex-1 min-w-0 pr-2">
-            <p className={`text-sm font-bold truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>{currentUser.name}</p>
-            <p className={`text-xs truncate ${isLight ? 'text-gray-500' : 'text-white/50'}`}>{currentUser.email}</p>
+            <p className={`text-sm font-bold truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>{currentUser?.name || 'User'}</p>
+            <p className={`text-xs truncate ${isLight ? 'text-gray-500' : 'text-white/50'}`}>{currentUser?.email || ''}</p>
           </div>
         </div>
         <button onClick={onClose} className={`p-1.5 rounded-lg transition-colors ${isLight ? 'hover:bg-gray-200 text-gray-500' : 'hover:bg-white/10 text-white/50'}`} title="Collapse sidebar">
@@ -123,11 +123,11 @@ export default function Sidebar({ isOpen, onClose }) {
               <div 
                 key={board.id}
                 onClick={() => setActiveBoard(board.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer group ${activeBoardId === board.id ? (isLight ? 'bg-gray-100/80 text-gray-900 border border-gray-200 shadow-sm' : 'bg-white/10 text-white border border-white/10 shadow-sm') : (isLight ? 'text-gray-600 hover:bg-gray-50' : 'text-white/70 hover:bg-white/5')}`}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer group ${activeBoardId == board.id ? (isLight ? 'bg-gray-100/80 text-gray-900 border border-gray-200 shadow-sm' : 'bg-white/10 text-white border border-white/10 shadow-sm') : (isLight ? 'text-gray-600 hover:bg-gray-50' : 'text-white/70 hover:bg-white/5')}`}
               >
                 <span className={`w-6 h-4 rounded bg-gradient-to-r ${board.color} shrink-0 shadow-sm`} />
                 
-                {editingBoardId === board.id ? (
+                {editingBoardId == board.id ? (
                   <form onSubmit={(e) => handleSaveEdit(e, board.id)} className="flex-1 flex items-center gap-1">
                     <input 
                       autoFocus
