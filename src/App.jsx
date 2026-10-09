@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Search, Bell, HelpCircle, Settings, ChevronDown,
   LayoutDashboard, Zap, BarChart3, Calendar, Menu, X,
-  Plus, LayoutTemplate, Edit2, Trash2, LogOut
+  Plus, LayoutTemplate, Edit2, Trash2, LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import Board from './components/Board';
 import Statistics from './components/Statistics';
@@ -213,27 +213,42 @@ function WorkspaceSidebar({ isOpen, onClose }) {
     { key: 'scenic-3', label: 'Beach', className: 'bg-scenic-3' },
   ];
 
-  if (!isOpen) return null;
-
   return (
     <>
-      {/* Mobile overlay */}
-      <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      {/* Mobile overlay with smooth fade */}
+      <div 
+        className={`md:hidden fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ease-in-out ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`} 
+        onClick={onClose} 
+      />
 
-      <aside className="w-[260px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-full z-50 fixed md:relative md:z-auto shadow-xl md:shadow-none">
-        {/* Workspace Header */}
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
-            {currentUser?.name?.charAt(0) || 'W'}
+      <aside 
+        className={`shrink-0 bg-white border-r border-gray-200 flex flex-col h-full z-40 fixed md:relative shadow-xl md:shadow-none transition-all duration-300 ease-in-out overflow-hidden ${
+          isOpen 
+            ? 'w-[260px] translate-x-0 opacity-100 pointer-events-auto' 
+            : 'w-0 -translate-x-full md:translate-x-0 md:w-0 opacity-0 pointer-events-none border-r-0'
+        }`}
+      >
+        <div className="w-[260px] min-w-[260px] flex flex-col h-full">
+          {/* Workspace Header */}
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+              {currentUser?.name?.charAt(0) || 'W'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-gray-900 truncate">{currentUser?.name}'s Workspace</p>
+              <p className="text-xs text-gray-500">Free</p>
+            </div>
+            <button 
+              onClick={onClose} 
+              title="Tutup sidebar"
+              className="text-gray-400 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-200/60 transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4 hidden md:block" />
+              <X className="w-4 h-4 md:hidden" />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate">{currentUser?.name}'s Workspace</p>
-            <p className="text-xs text-gray-500">Free</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors md:hidden">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
         <div className="flex-1 overflow-y-auto py-3 px-2">
           {/* Views */}
@@ -381,6 +396,7 @@ function WorkspaceSidebar({ isOpen, onClose }) {
             <span className="w-4 h-4 flex items-center justify-center">↳</span> Log out
           </button>
         </div>
+        </div>
       </aside>
     </>
   );
@@ -412,9 +428,20 @@ function Dashboard() {
       <GlobalNav onToggleSidebar={() => setSidebarOpen(o => !o)} sidebarOpen={sidebarOpen} />
 
       {/* Below Nav */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
         <WorkspaceSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        {/* Floating toggle button when sidebar is collapsed on desktop */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            title="Buka sidebar"
+            className="hidden md:flex absolute top-3 left-3 z-30 p-2 rounded-lg bg-white/90 hover:bg-white text-gray-700 shadow-md backdrop-blur border border-gray-200/80 transition-all hover:scale-105 items-center justify-center cursor-pointer group"
+          >
+            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-blue-600 transition-colors" />
+          </button>
+        )}
 
         {/* Main */}
         <main
