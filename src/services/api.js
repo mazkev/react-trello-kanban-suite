@@ -51,6 +51,11 @@ export const api = {
   },
 
   getMe: () => request('/me'),
+  updateProfile: (profileData) =>
+    request('/me', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    }),
 
   // 2. Boards
   getBoards: () => request('/boards'),

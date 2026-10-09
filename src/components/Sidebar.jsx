@@ -175,12 +175,15 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
 
       <div className={`p-4 border-t ${isLight ? 'border-gray-200' : 'border-white/10'} space-y-1`}>
-        <button className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isLight ? 'text-gray-600 hover:bg-gray-100' : 'text-white/70 hover:bg-white/10'}`}>
+        <button 
+          onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${isLight ? 'text-gray-600 hover:bg-gray-100' : 'text-white/70 hover:bg-white/10'}`}
+        >
           <Settings className="w-4 h-4" /> Settings
         </button>
         <button 
-          onClick={() => useBoardStore.getState().setAppMode('landing')}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isLight ? 'text-red-600 hover:bg-red-50' : 'text-red-400 hover:bg-red-500/10'}`}
+          onClick={() => useBoardStore.getState().logout()}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${isLight ? 'text-red-600 hover:bg-red-50' : 'text-red-400 hover:bg-red-500/10'}`}
         >
           <span className="w-4 h-4 flex items-center justify-center font-bold">↳</span> Log out
         </button>

@@ -10,6 +10,7 @@ import Workflows from './components/Workflows';
 import CalendarView from './components/CalendarView';
 import Landing from './components/Landing';
 import Login from './components/Login';
+import SettingsModal from './components/SettingsModal';
 import { useBoardStore } from './store/useBoardStore';
 
 const BG_MAP = {
@@ -154,12 +155,20 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
         <button className="p-2 rounded hover:bg-white/20 text-white transition-colors">
           <HelpCircle className="w-5 h-5" />
         </button>
-        <button className="p-2 rounded hover:bg-white/20 text-white transition-colors">
+        <button 
+          onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
+          title="Pengaturan & Preferensi"
+          className="p-2 rounded hover:bg-white/20 text-white transition-colors cursor-pointer"
+        >
           <Settings className="w-5 h-5" />
         </button>
 
         {/* Avatar */}
-        <button className="ml-1 w-8 h-8 rounded-full overflow-hidden border-2 border-white/40 hover:border-white transition-colors">
+        <button 
+          onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
+          title="Profil Pengguna & Akun"
+          className="ml-1 w-8 h-8 rounded-full overflow-hidden border-2 border-white/40 hover:border-white transition-colors cursor-pointer"
+        >
           <img
             src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
             alt="Avatar"
@@ -359,12 +368,15 @@ function WorkspaceSidebar({ isOpen, onClose }) {
 
         {/* Bottom */}
         <div className="border-t border-gray-200 p-3 space-y-0.5">
-          <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+          <button 
+            onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+          >
             <Settings className="w-4 h-4 text-gray-500" /> Settings
           </button>
           <button
-            onClick={() => useBoardStore.getState().setAppMode('landing')}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            onClick={() => useBoardStore.getState().logout()}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
           >
             <span className="w-4 h-4 flex items-center justify-center">↳</span> Log out
           </button>
@@ -491,6 +503,9 @@ function Dashboard() {
           </div>
         </main>
       </div>
+
+      {/* Global Settings & Preferences Modal */}
+      <SettingsModal />
     </div>
   );
 }

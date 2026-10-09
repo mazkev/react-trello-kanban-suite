@@ -59,6 +59,7 @@ export const useBoardStore = create(
         currentView: 'board', // 'board' | 'workflows' | 'statistics' | 'calendar'
         searchQuery: '',
         currentUser: { name: 'Kevin P.', email: 'kevin@example.com' },
+        isSettingsOpen: false,
         workflows: [
           { id: 1, title: 'Auto-Complete Tasks', trigger: 'When a card is moved to "Done" list', action: 'Mark task status as completed', active: true, color: 'bg-green-500' },
           { id: 2, title: 'Stale Card Alert', trigger: 'When a card sits in "In Progress" for 3 days', action: 'Add red label & notify members', active: false, color: 'bg-red-500' },
@@ -72,6 +73,7 @@ export const useBoardStore = create(
         setCurrentView: (currentView) => set({ currentView }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
         setCurrentUser: (user) => set({ currentUser: user }),
+        setIsSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
         toggleWorkflow: (id) => set(state => ({
           workflows: state.workflows.map(w => w.id === id ? { ...w, active: !w.active } : w)
         })),
@@ -299,11 +301,28 @@ export const useBoardStore = create(
           }
         },
 
+        // Update User Profile
+        updateUserProfile: async (data) => {
+          try {
+            const res = await api.updateProfile(data);
+            if (res?.data) {
+              set(state => ({
+                currentUser: { ...state.currentUser, ...res.data }
+              }));
+              return res.data;
+            }
+          } catch (err) {
+            console.error('Failed to update profile:', err);
+            throw err;
+          }
+        },
+
         logout: () => {
           setAuthToken(null);
           set({
             appMode: 'login',
             currentUser: null,
+            isSettingsOpen: false,
           });
         }
       };
