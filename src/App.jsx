@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import {
   Search, Bell, HelpCircle, Settings, ChevronDown,
   LayoutDashboard, Zap, BarChart3, Calendar, Menu, X,
-  Plus, LayoutTemplate, Edit2, Trash2, LogOut, ChevronLeft, ChevronRight
+  Plus, LayoutTemplate, Edit2, Trash2, LogOut, ChevronLeft, ChevronRight,
+  Star, BookOpen
 } from 'lucide-react';
 import Board from './components/Board';
 import Statistics from './components/Statistics';
@@ -23,6 +24,37 @@ const BG_MAP = {
   'scenic-3':{ css: '', type: 'image', cls: 'bg-scenic-3' },
 };
 
+const BOARD_TEMPLATES = [
+  {
+    id: 'agile',
+    title: 'Agile Sprint Kanban',
+    desc: 'Sprint software engineering dengan alur backlog hingga deployment.',
+    color: 'from-blue-600 to-indigo-600',
+    lists: ['Backlog', 'In Progress', 'Code Review', 'Done'],
+  },
+  {
+    id: 'design',
+    title: 'Design & Creative Roadmap',
+    desc: 'Pipeline desain UI/UX, eksplorasi visual, dan handoff developer.',
+    color: 'from-purple-600 to-pink-600',
+    lists: ['Ideas & Research', 'Wireframes', 'Review Desain', 'Final & Published'],
+  },
+  {
+    id: 'project',
+    title: 'Project Management',
+    desc: 'Manajemen tugas lintas departemen dengan status bertahap.',
+    color: 'from-emerald-600 to-teal-600',
+    lists: ['To Do', 'In Progress', 'Under Review', 'Completed'],
+  },
+  {
+    id: 'weekly',
+    title: 'Weekly Task Planner',
+    desc: 'Perencana jadwal mingguan kerja dan produktivitas harian.',
+    color: 'from-amber-600 to-orange-600',
+    lists: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'],
+  },
+];
+
 function TrelloLogo() {
   return (
     <svg viewBox="0 0 50 42" className="w-[50px] h-[42px] fill-white">
@@ -35,10 +67,24 @@ function TrelloLogo() {
 
 function GlobalNav({ onToggleSidebar, sidebarOpen }) {
   const currentUser = useBoardStore(s => s.currentUser);
+  const boards = useBoardStore(s => s.boards);
+  const activeBoardId = useBoardStore(s => s.activeBoardId);
+  const setActiveBoard = useBoardStore(s => s.setActiveBoard);
+  const createBoard = useBoardStore(s => s.createBoard);
+  const starredBoardIds = useBoardStore(s => s.starredBoardIds || []);
+  const toggleStarredBoard = useBoardStore(s => s.toggleStarredBoard);
+  const setCurrentView = useBoardStore(s => s.setCurrentView);
+  const setIsSettingsOpen = useBoardStore(s => s.setIsSettingsOpen);
+  const logout = useBoardStore(s => s.logout);
+
   const [searchVal, setSearchVal] = useState('');
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'workspace' | 'recent' | 'starred' | 'templates' | 'create' | 'notif' | 'help' | 'profile'
   const searchRef = useRef(null);
+
+  // New Board form state inside Create dropdown
+  const [newTitle, setNewTitle] = useState('');
+  const [selectedColor, setSelectedColor] = useState('from-blue-500 to-indigo-500');
+  const [isCreating, setIsCreating] = useState(false);
 
   const notifications = [
     { id: 1, text: 'Kevin moved "Design landing page" to Done', time: '2m ago', read: false },
@@ -47,45 +93,308 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
   ];
   const unread = notifications.filter(n => !n.read).length;
 
+  const toggleMenu = (name) => {
+    setActiveDropdown(prev => prev === name ? null : name);
+  };
+
+  const handleCreateNewBoard = async (e) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+    setIsCreating(true);
+    try {
+      await createBoard(newTitle.trim(), selectedColor);
+      setNewTitle('');
+      setActiveDropdown(null);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   return (
     <header className="h-12 bg-[#026AA7] flex items-center gap-2 px-3 shrink-0 z-50 relative">
+      {/* Backdrop for closing open dropdown */}
+      {activeDropdown && (
+        <div 
+          className="fixed inset-0 z-40 bg-transparent" 
+          onClick={() => setActiveDropdown(null)} 
+        />
+      )}
+
       {/* Hamburger */}
       <button
         onClick={onToggleSidebar}
-        className="p-1.5 rounded hover:bg-white/20 text-white transition-colors"
-        title="Toggle menu"
+        className="p-1.5 rounded hover:bg-white/20 text-white transition-colors cursor-pointer"
+        title="Toggle sidebar menu"
       >
         <Menu className="w-5 h-5" />
       </button>
 
       {/* Logo */}
-      <button className="p-1 rounded hover:bg-white/20 transition-colors flex items-center">
+      <button 
+        onClick={() => { setCurrentView('board'); }}
+        className="p-1 rounded hover:bg-white/20 transition-colors flex items-center cursor-pointer"
+      >
         <TrelloLogo />
       </button>
 
-      {/* Workspace Dropdown */}
-      <div className="hidden md:flex">
-        <button className="flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded hover:bg-white/20 transition-colors">
-          Workspace <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-        </button>
-        <button className="flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded hover:bg-white/20 transition-colors">
-          Recent <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-        </button>
-        <button className="flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded hover:bg-white/20 transition-colors">
-          Starred <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-        </button>
-        <button className="flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded hover:bg-white/20 transition-colors">
-          Templates <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-        </button>
+      {/* Left Navigation Menus */}
+      <div className="hidden md:flex items-center gap-1 relative z-50">
+        
+        {/* 1. WORKSPACE MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('workspace')}
+            className={`flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer ${
+              activeDropdown === 'workspace' ? 'bg-white/30' : 'hover:bg-white/20'
+            }`}
+          >
+            Workspace <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+          </button>
+          
+          {activeDropdown === 'workspace' && (
+            <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ruang Kerja Aktif</p>
+                <div className="flex items-center gap-2.5 mt-2">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
+                    {currentUser?.name?.charAt(0) || 'W'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-gray-800 leading-tight truncate">{currentUser?.name}'s Workspace</p>
+                    <p className="text-[11px] text-emerald-600 font-semibold">Free Workspace</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2 max-h-60 overflow-y-auto">
+                <p className="px-2 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Board Anda ({boards.length})</p>
+                {boards.map(b => (
+                  <button
+                    key={b.id}
+                    onClick={() => { setActiveBoard(b.id); setCurrentView('board'); setActiveDropdown(null); }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      b.id == activeBoardId ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className={`w-3.5 h-3.5 rounded shrink-0 bg-gradient-to-r ${b.color || 'from-blue-500 to-indigo-500'}`} />
+                      <span className="truncate">{b.title}</span>
+                    </div>
+                    <span className="text-[11px] text-gray-400 shrink-0 ml-2">{(b.lists || []).length} list</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-2 border-t border-gray-100 bg-gray-50/50 flex flex-col gap-1">
+                <button
+                  onClick={() => toggleMenu('create')}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Buat Board Baru
+                </button>
+                <button
+                  onClick={() => { setIsSettingsOpen(true); setActiveDropdown(null); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                >
+                  <Settings className="w-3.5 h-3.5" /> Pengaturan Workspace
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 2. RECENT MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('recent')}
+            className={`flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer ${
+              activeDropdown === 'recent' ? 'bg-white/30' : 'hover:bg-white/20'
+            }`}
+          >
+            Recent <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+          </button>
+
+          {activeDropdown === 'recent' && (
+            <div className="absolute left-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 className="font-bold text-gray-800 text-xs uppercase tracking-wider">Board Terbaru</h3>
+                <span className="text-[11px] text-gray-400">{boards.length} board</span>
+              </div>
+              <div className="p-2 max-h-64 overflow-y-auto">
+                {boards.slice().reverse().map(b => (
+                  <button
+                    key={b.id}
+                    onClick={() => { setActiveBoard(b.id); setCurrentView('board'); setActiveDropdown(null); }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm text-left transition-colors cursor-pointer ${
+                      b.id == activeBoardId ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className={`w-3.5 h-3.5 rounded shrink-0 bg-gradient-to-r ${b.color || 'from-blue-500 to-indigo-500'}`} />
+                      <span className="truncate">{b.title}</span>
+                    </div>
+                    {b.id == activeBoardId && (
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded">Aktif</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 3. STARRED MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('starred')}
+            className={`flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer ${
+              activeDropdown === 'starred' ? 'bg-white/30' : 'hover:bg-white/20'
+            }`}
+          >
+            Starred <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+          </button>
+
+          {activeDropdown === 'starred' && (
+            <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 className="font-bold text-gray-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-500" /> Board Berbintang
+                </h3>
+              </div>
+              <div className="p-2 max-h-64 overflow-y-auto">
+                {boards.filter(b => (starredBoardIds || []).some(id => id == b.id)).length > 0 ? (
+                  boards.filter(b => (starredBoardIds || []).some(id => id == b.id)).map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => { setActiveBoard(b.id); setCurrentView('board'); setActiveDropdown(null); }}
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm text-left hover:bg-gray-100 transition-colors text-gray-800 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <div className={`w-3.5 h-3.5 rounded shrink-0 bg-gradient-to-r ${b.color || 'from-blue-500 to-indigo-500'}`} />
+                        <span className="truncate">{b.title}</span>
+                      </div>
+                      <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-500 shrink-0" />
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-6 text-center text-gray-500">
+                    <Star className="w-8 h-8 text-yellow-400 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs font-semibold text-gray-700">Belum ada board berbintang</p>
+                    <p className="text-[11px] text-gray-400 mt-1">Klik tanda bintang di header board untuk pin ke menu ini.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. TEMPLATES MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('templates')}
+            className={`flex items-center gap-1 text-white text-sm font-semibold px-3 py-1.5 rounded transition-colors cursor-pointer ${
+              activeDropdown === 'templates' ? 'bg-white/30' : 'hover:bg-white/20'
+            }`}
+          >
+            Templates <ChevronDown className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+          </button>
+
+          {activeDropdown === 'templates' && (
+            <div className="absolute left-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                <h3 className="font-bold text-gray-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <LayoutTemplate className="w-3.5 h-3.5 text-blue-600" /> Template Siap Pakai
+                </h3>
+              </div>
+              <div className="p-2 space-y-1.5 max-h-80 overflow-y-auto">
+                {BOARD_TEMPLATES.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    onClick={async () => {
+                      await createBoard(tpl.title, tpl.color, tpl.lists);
+                      setActiveDropdown(null);
+                    }}
+                    className="w-full p-2.5 rounded-lg border border-gray-100 hover:border-blue-300 hover:bg-blue-50/40 text-left transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded shrink-0 bg-gradient-to-r ${tpl.color}`} />
+                      <h4 className="text-xs font-bold text-gray-800 group-hover:text-blue-700">{tpl.title}</h4>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1 leading-snug">{tpl.desc}</p>
+                    <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400 font-medium truncate">
+                      <span>Kolom:</span>
+                      <span className="text-gray-600 truncate">{tpl.lists.join(' → ')}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
 
-      {/* Create Button */}
-      <button
-        onClick={() => setCreateOpen(!createOpen)}
-        className="flex items-center gap-1.5 bg-white text-[#0052CC] text-sm font-bold px-3 py-1.5 rounded hover:bg-[#E9F2FF] transition-colors ml-1"
-      >
-        <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Create</span>
-      </button>
+      {/* 5. CREATE BUTTON */}
+      <div className="relative z-50">
+        <button
+          onClick={() => toggleMenu('create')}
+          className={`flex items-center gap-1.5 bg-white text-[#0052CC] text-sm font-bold px-3 py-1.5 rounded transition-colors ml-1 cursor-pointer ${
+            activeDropdown === 'create' ? 'bg-[#E9F2FF] ring-2 ring-white/60' : 'hover:bg-[#E9F2FF]'
+          }`}
+        >
+          <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Create</span>
+        </button>
+
+        {activeDropdown === 'create' && (
+          <div className="absolute left-0 top-full mt-1.5 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-4 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="font-bold text-gray-900 text-sm mb-3">Buat Board Baru</h3>
+            <form onSubmit={handleCreateNewBoard} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1">Judul Board</label>
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder="Contoh: Sprint Mobile App"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-600 uppercase mb-1.5">Warna Tema</label>
+                <div className="flex gap-2">
+                  {[
+                    'from-blue-500 to-indigo-500',
+                    'from-purple-600 to-pink-600',
+                    'from-green-500 to-emerald-500',
+                    'from-orange-500 to-red-500',
+                    'from-slate-700 to-slate-900',
+                  ].map(c => (
+                    <button
+                      type="button"
+                      key={c}
+                      onClick={() => setSelectedColor(c)}
+                      className={`w-7 h-7 rounded-md bg-gradient-to-r ${c} transition-transform cursor-pointer ${
+                        selectedColor === c ? 'scale-110 ring-2 ring-blue-600 ring-offset-1' : 'hover:scale-105'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isCreating}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer shadow-md shadow-blue-500/20 disabled:opacity-50"
+              >
+                {isCreating ? 'Membuat...' : 'Buat Board'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -97,13 +406,13 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
           <input
             ref={searchRef}
             type="text"
-            placeholder="Search"
+            placeholder="Search cards..."
             value={searchVal}
             onChange={e => { setSearchVal(e.target.value); useBoardStore.getState().setSearchQuery(e.target.value); }}
             className="bg-transparent outline-none text-sm w-full placeholder-white/70 focus:placeholder-gray-400"
           />
           {searchVal && (
-            <button onClick={() => { setSearchVal(''); useBoardStore.getState().setSearchQuery(''); }} className="shrink-0">
+            <button onClick={() => { setSearchVal(''); useBoardStore.getState().setSearchQuery(''); }} className="shrink-0 cursor-pointer">
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -111,12 +420,13 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
       </div>
 
       {/* Right Icons */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-0.5 relative z-50">
+        
         {/* Notifications */}
         <div className="relative">
           <button
-            onClick={() => setNotifOpen(!notifOpen)}
-            className="relative p-2 rounded hover:bg-white/20 text-white transition-colors"
+            onClick={() => toggleMenu('notif')}
+            className={`relative p-2 rounded text-white transition-colors cursor-pointer ${activeDropdown === 'notif' ? 'bg-white/30' : 'hover:bg-white/20'}`}
           >
             <Bell className="w-5 h-5" />
             {unread > 0 && (
@@ -125,56 +435,127 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
               </span>
             )}
           </button>
-          {notifOpen && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-              <div className="absolute right-0 top-10 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 fade-in overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="font-bold text-gray-800 text-base">Notifications</h3>
-                  <button className="text-xs text-blue-600 hover:underline font-medium">Mark all read</button>
-                </div>
-                <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`px-5 py-4 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.read ? 'bg-blue-50/50' : ''}`}>
-                      <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-blue-500' : 'bg-transparent'}`} />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700 leading-snug">{n.text}</p>
-                        <p className="text-xs text-gray-400 mt-1">{n.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="px-5 py-3 border-t border-gray-100 text-center">
-                  <button className="text-sm text-blue-600 hover:underline font-medium">View all notifications</button>
-                </div>
+
+          {activeDropdown === 'notif' && (
+            <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
+                <span className="text-xs text-blue-600 font-medium">Tandai sudah dibaca</span>
               </div>
-            </>
+              <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+                {notifications.map(n => (
+                  <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.read ? 'bg-blue-50/40' : ''}`}>
+                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-blue-500' : 'bg-transparent'}`} />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-700 leading-snug">{n.text}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{n.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        <button className="p-2 rounded hover:bg-white/20 text-white transition-colors">
-          <HelpCircle className="w-5 h-5" />
-        </button>
+        {/* 6. HELP MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('help')}
+            title="Bantuan & Panduan"
+            className={`p-2 rounded text-white transition-colors cursor-pointer ${activeDropdown === 'help' ? 'bg-white/30' : 'hover:bg-white/20'}`}
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+
+          {activeDropdown === 'help' && (
+            <div className="absolute right-0 top-full mt-1.5 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-4 animate-in fade-in zoom-in-95 duration-150">
+              <h3 className="font-bold text-gray-900 text-xs uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-blue-600" /> Panduan & Pintasan Fitur
+              </h3>
+              <div className="space-y-2 text-xs text-gray-600 border-t border-gray-100 pt-2.5">
+                <div className="flex gap-2">
+                  <span className="font-bold text-gray-800 shrink-0">🖱️ Drag & Drop:</span>
+                  <span>Geser kartu antar kolom untuk memindahkan tahapan status tugas.</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="font-bold text-gray-800 shrink-0">📋 Sub-tugas:</span>
+                  <span>Buka kartu tugas untuk mengelola checklist dan mencentang progres.</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="font-bold text-gray-800 shrink-0">⭐ Starred:</span>
+                  <span>Tandai board favorit agar selalu tampil di menu Starred atas.</span>
+                </div>
+                <div className="flex gap-2">
+                  <span className="font-bold text-gray-800 shrink-0">⚙️ Pengaturan:</span>
+                  <span>Ganti nama, password, dan wallpaper board di menu Settings.</span>
+                </div>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                <span>Backend REST API</span>
+                <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> localhost:8080
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Settings Shortcut Button */}
         <button 
-          onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
+          onClick={() => setIsSettingsOpen(true)}
           title="Pengaturan & Preferensi"
           className="p-2 rounded hover:bg-white/20 text-white transition-colors cursor-pointer"
         >
           <Settings className="w-5 h-5" />
         </button>
 
-        {/* Avatar */}
-        <button 
-          onClick={() => useBoardStore.getState().setIsSettingsOpen(true)}
-          title="Profil Pengguna & Akun"
-          className="ml-1 w-8 h-8 rounded-full overflow-hidden border-2 border-white/40 hover:border-white transition-colors cursor-pointer"
-        >
-          <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
-            alt="Avatar"
-            className="w-full h-full object-cover bg-blue-200"
-          />
-        </button>
+        {/* 7. AVATAR / PROFILE MENU */}
+        <div className="relative">
+          <button 
+            onClick={() => toggleMenu('profile')}
+            title="Profil Pengguna & Akun"
+            className={`ml-1 w-8 h-8 rounded-full overflow-hidden border-2 transition-colors cursor-pointer ${
+              activeDropdown === 'profile' ? 'border-white ring-2 ring-white/50' : 'border-white/40 hover:border-white'
+            }`}
+          >
+            <img
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
+              alt="Avatar"
+              className="w-full h-full object-cover bg-blue-200"
+            />
+          </button>
+
+          {activeDropdown === 'profile' && (
+            <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <img
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
+                  alt="Avatar"
+                  className="w-10 h-10 rounded-full border border-gray-200 bg-blue-100 shrink-0"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">{currentUser?.name || 'User'}</p>
+                  <p className="text-xs text-gray-500 truncate">{currentUser?.email || 'kevin@example.com'}</p>
+                </div>
+              </div>
+              <div className="p-2 space-y-1">
+                <button
+                  onClick={() => { setIsSettingsOpen(true); setActiveDropdown(null); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer text-left"
+                >
+                  <Settings className="w-4 h-4 text-gray-500" /> Pengaturan & Profil
+                </button>
+                <button
+                  onClick={() => { logout(); setActiveDropdown(null); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-left"
+                >
+                  <LogOut className="w-4 h-4" /> Keluar Akun
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
       </div>
     </header>
   );
@@ -410,10 +791,11 @@ function Dashboard() {
   const fetchBoards = useBoardStore(s => s.fetchBoards);
   const renameBoard = useBoardStore(s => s.renameBoard);
   const deleteBoard = useBoardStore(s => s.deleteBoard);
+  const starredBoardIds = useBoardStore(s => s.starredBoardIds || []);
+  const toggleStarredBoard = useBoardStore(s => s.toggleStarredBoard);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingHeaderTitle, setEditingHeaderTitle] = useState(false);
   const [headerTitle, setHeaderTitle] = useState('');
-  const [isStarred, setIsStarred] = useState(false);
 
   useEffect(() => {
     fetchBoards();
@@ -491,10 +873,12 @@ function Dashboard() {
                 )}
                 <div className="w-px h-5 bg-white/30 mx-1" />
                 <button
-                  onClick={() => setIsStarred(!isStarred)}
-                  className={`trello-btn text-sm flex items-center gap-1.5 h-8 px-3 ${isStarred ? 'bg-yellow-400/40 text-yellow-200' : ''}`}
+                  onClick={() => activeBoard && toggleStarredBoard(activeBoard.id)}
+                  className={`trello-btn text-sm flex items-center gap-1.5 h-8 px-3 transition-colors ${
+                    (starredBoardIds || []).some(id => id == activeBoardId) ? 'bg-yellow-400/40 text-yellow-200' : ''
+                  }`}
                 >
-                  <span>{isStarred ? '⭐' : '☆'}</span> {isStarred ? 'Starred' : 'Star'}
+                  <span>{(starredBoardIds || []).some(id => id == activeBoardId) ? '⭐' : '☆'}</span> {(starredBoardIds || []).some(id => id == activeBoardId) ? 'Starred' : 'Star'}
                 </button>
               </div>
 

@@ -60,6 +60,7 @@ export const useBoardStore = create(
         searchQuery: '',
         currentUser: { name: 'Kevin P.', email: 'kevin@example.com' },
         isSettingsOpen: false,
+        starredBoardIds: [],
         workflows: [
           { id: 1, title: 'Auto-Complete Tasks', trigger: 'When a card is moved to "Done" list', action: 'Mark task status as completed', active: true, color: 'bg-green-500' },
           { id: 2, title: 'Stale Card Alert', trigger: 'When a card sits in "In Progress" for 3 days', action: 'Add red label & notify members', active: false, color: 'bg-red-500' },
@@ -74,6 +75,14 @@ export const useBoardStore = create(
         setSearchQuery: (searchQuery) => set({ searchQuery }),
         setCurrentUser: (user) => set({ currentUser: user }),
         setIsSettingsOpen: (isSettingsOpen) => set({ isSettingsOpen }),
+        toggleStarredBoard: (boardId) => set(state => {
+          const isStarred = (state.starredBoardIds || []).some(id => id == boardId);
+          return {
+            starredBoardIds: isStarred
+              ? state.starredBoardIds.filter(id => id != boardId)
+              : [...(state.starredBoardIds || []), boardId]
+          };
+        }),
         toggleWorkflow: (id) => set(state => ({
           workflows: state.workflows.map(w => w.id === id ? { ...w, active: !w.active } : w)
         })),
@@ -109,28 +118,39 @@ export const useBoardStore = create(
 
         setActiveBoard: (id) => set({ activeBoardId: id }),
 
-        createBoard: async (title) => {
+        createBoard: async (title, customColor, initialLists = []) => {
           const colors = ['from-blue-500 to-indigo-500', 'from-purple-600 to-pink-600', 'from-green-500 to-emerald-500', 'from-orange-500 to-red-500'];
-          const color = colors[get().boards.length % colors.length];
+          const color = customColor || colors[get().boards.length % colors.length];
+          let createdBoard = null;
           try {
             const res = await api.createBoard(title, color);
             if (res?.data) {
-              const newBoard = {
+              createdBoard = {
                 ...res.data,
                 lists: (res.data.lists || []).map(l => ({ ...l, cards: l.cards || [] }))
               };
               set(state => ({
-                boards: [...state.boards, newBoard],
-                activeBoardId: newBoard.id,
+                boards: [...state.boards, createdBoard],
+                activeBoardId: createdBoard.id,
                 currentView: 'board'
               }));
-              return newBoard;
             }
           } catch (err) {
             console.error('Create board error:', err);
           }
-          const localBoard = { id: generateId(), title, color, lists: [] };
-          set((state) => ({ boards: [...state.boards, localBoard], activeBoardId: localBoard.id, currentView: 'board' }));
+          if (!createdBoard) {
+            createdBoard = { id: generateId(), title, color, lists: [] };
+            set((state) => ({ boards: [...state.boards, createdBoard], activeBoardId: createdBoard.id, currentView: 'board' }));
+          }
+
+          // If initial lists provided (e.g. from template), create them in order
+          if (initialLists.length > 0 && createdBoard) {
+            for (const listTitle of initialLists) {
+              await get().addList(createdBoard.id, listTitle);
+            }
+          }
+
+          return createdBoard;
         },
 
         renameBoard: async (id, newTitle) => {
@@ -334,7 +354,8 @@ export const useBoardStore = create(
         theme: state.theme,
         skin: state.skin,
         currentUser: state.currentUser,
-        workflows: state.workflows
+        workflows: state.workflows,
+        starredBoardIds: state.starredBoardIds,
       })
     }
   )
