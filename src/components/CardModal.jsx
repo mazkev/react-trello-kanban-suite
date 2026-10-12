@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   X, CheckSquare, Tag, AlignLeft, Trash2, Calendar,
   Image as ImageIcon, Plus, CheckCircle2, User, Paperclip,
-  Activity, LayoutTemplate, ChevronDown
+  Activity, LayoutTemplate, ChevronDown, MessageSquare, Send
 } from 'lucide-react';
 import { useBoardStore } from '../store/useBoardStore';
 import { api } from '../services/api';
@@ -40,6 +40,8 @@ function ActionButton({ icon, label, onClick }) {
 export default function CardModal({ listId, card, onClose }) {
   const updateCard = useBoardStore(s => s.updateCard);
   const deleteCard = useBoardStore(s => s.deleteCard);
+  const addComment = useBoardStore(s => s.addComment);
+  const deleteComment = useBoardStore(s => s.deleteComment);
   const boards = useBoardStore(s => s.boards);
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const currentUser = useBoardStore(s => s.currentUser);
@@ -58,6 +60,11 @@ export default function CardModal({ listId, card, onClose }) {
   const [checklist, setChecklist] = useState(card.checklist || []);
   const [newItem, setNewItem] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
+
+  // Comment Thread state
+  const [comments, setComments] = useState(card.comments || []);
+  const [commentText, setCommentText] = useState('');
+  const [isAddingComment, setIsAddingComment] = useState(false);
 
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') handleSave(); };
@@ -116,6 +123,34 @@ export default function CardModal({ listId, card, onClose }) {
         await api.deleteChecklistItem(target.id);
       } catch (err) {
         console.error('Checklist delete error:', err);
+      }
+    }
+  };
+
+  const handleAddComment = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    setIsAddingComment(true);
+    try {
+      const newCmt = await addComment(card.id, commentText.trim());
+      if (newCmt) {
+        setComments(prev => [...prev, newCmt]);
+      }
+      setCommentText('');
+    } catch (err) {
+      alert('Gagal menambahkan komentar: ' + err.message);
+    } finally {
+      setIsAddingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (window.confirm('Hapus komentar ini?')) {
+      try {
+        await deleteComment(card.id, commentId);
+        setComments(prev => prev.filter(c => c.id != commentId));
+      } catch (err) {
+        alert('Gagal menghapus komentar: ' + err.message);
       }
     }
   };
@@ -293,20 +328,75 @@ export default function CardModal({ listId, card, onClose }) {
                 </div>
               </div>
 
-              {/* Activity (decorative) */}
-              <div>
-                <SectionHeader icon={<Activity className="w-4 h-4" />} title="Activity" />
-                <div className="flex items-start gap-3">
+              {/* Activity & Comments Discussion */}
+              <div className="space-y-3 pt-2">
+                <SectionHeader icon={<MessageSquare className="w-4 h-4 text-gray-500" />} title="Aktivitas & Komentar" />
+                
+                {/* Form Input Komentar */}
+                <form onSubmit={handleAddComment} className="flex items-start gap-3">
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}&backgroundColor=b6e3f4`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
                     alt="avatar"
-                    className="w-8 h-8 rounded-full bg-blue-100 shrink-0 border border-gray-200"
+                    className="w-8 h-8 rounded-full bg-blue-100 shrink-0 border border-gray-200 mt-0.5"
                   />
-                  <input
-                    type="text"
-                    placeholder="Write a comment..."
-                    className="flex-1 border border-gray-300 bg-white rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0052CC] transition-all"
-                  />
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Tulis komentar atau update tugas..."
+                      value={commentText}
+                      onChange={e => setCommentText(e.target.value)}
+                      className="w-full border border-gray-300 bg-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0052CC] transition-all shadow-xs"
+                    />
+                    {commentText.trim() && (
+                      <div className="flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={isAddingComment}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0052CC] hover:bg-[#0065FF] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Send className="w-3.5 h-3.5" /> {isAddingComment ? 'Mengirim...' : 'Kirim Komentar'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </form>
+
+                {/* List Komentar */}
+                <div className="space-y-3 pt-2">
+                  {comments.length > 0 ? (
+                    comments.map((c) => (
+                      <div key={c.id} className="flex items-start gap-3 group">
+                        <img
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.userName || 'user'}&backgroundColor=b6e3f4`}
+                          alt="avatar"
+                          className="w-8 h-8 rounded-full bg-gray-100 shrink-0 border border-gray-200 mt-0.5"
+                        />
+                        <div className="flex-1 bg-white border border-gray-200/80 rounded-xl p-3 shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-gray-800">{c.userName || 'Anggota Tim'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-gray-400">
+                                {c.createdAt ? new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) : 'baru saja'}
+                              </span>
+                              {(c.userId == currentUser?.id || c.userName == currentUser?.name) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(c.id)}
+                                  title="Hapus komentar"
+                                  className="text-gray-400 hover:text-red-600 transition-colors p-0.5 rounded cursor-pointer opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic pl-11">Belum ada komentar. Mulai diskusi tentang tugas ini!</p>
+                  )}
                 </div>
               </div>
             </div>

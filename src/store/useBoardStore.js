@@ -100,7 +100,8 @@ export const useBoardStore = create(
                   ...list,
                   cards: (list.cards || []).map(card => ({
                     ...card,
-                    checklist: card.checklist || []
+                    checklist: card.checklist || [],
+                    comments: card.comments || []
                   }))
                 }))
               }));
@@ -318,6 +319,55 @@ export const useBoardStore = create(
             await api.moveCard(removedCard.id, destinationListId, destinationIndex + 1);
           } catch (err) {
             console.error('Move card error:', err);
+          }
+        },
+
+        // Add Comment to Card
+        addComment: async (cardId, content) => {
+          try {
+            const res = await api.createCardComment(cardId, content);
+            if (res?.data) {
+              set(state => ({
+                boards: state.boards.map(b => ({
+                  ...b,
+                  lists: (b.lists || []).map(l => ({
+                    ...l,
+                    cards: (l.cards || []).map(c => 
+                      c.id == cardId 
+                        ? { ...c, comments: [...(c.comments || []), res.data] }
+                        : c
+                    )
+                  }))
+                }))
+              }));
+              return res.data;
+            }
+          } catch (err) {
+            console.error('Failed to add comment:', err);
+            throw err;
+          }
+        },
+
+        // Delete Comment from Card
+        deleteComment: async (cardId, commentId) => {
+          try {
+            await api.deleteCardComment(commentId);
+            set(state => ({
+              boards: state.boards.map(b => ({
+                ...b,
+                lists: (b.lists || []).map(l => ({
+                  ...l,
+                  cards: (l.cards || []).map(c => 
+                    c.id == cardId 
+                      ? { ...c, comments: (c.comments || []).filter(cmt => cmt.id != commentId) }
+                      : c
+                  )
+                }))
+              }))
+            }));
+          } catch (err) {
+            console.error('Failed to delete comment:', err);
+            throw err;
           }
         },
 

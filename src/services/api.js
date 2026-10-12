@@ -132,4 +132,16 @@ export const api = {
     request(`/checklist/${id}`, {
       method: 'DELETE',
     }),
+
+  // 6. Comments & Activity
+  getCardComments: (cardId) => request(`/cards/${cardId}/comments`),
+  createCardComment: (cardId, content) =>
+    request(`/cards/${cardId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+  deleteCardComment: (commentId) =>
+    request(`/comments/${commentId}`, {
+      method: 'DELETE',
+    }),
 };

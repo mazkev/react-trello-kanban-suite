@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { AlignLeft, CheckSquare, Calendar, CheckCircle2, Edit3 } from 'lucide-react';
+import { AlignLeft, CheckSquare, Calendar, CheckCircle2, Edit3, MessageSquare } from 'lucide-react';
 import CardModal from './CardModal';
 import { useBoardStore } from '../store/useBoardStore';
 
@@ -99,6 +99,13 @@ export default function Card({ card, index, listId, isDragDisabled }) {
                   <div className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${checklistDone ? 'bg-green-100 text-green-700' : 'text-gray-500'}`}>
                     <CheckSquare className="w-3 h-3" />
                     {checklistChecked}/{checklistCount}
+                  </div>
+                )}
+
+                {(card.comments?.length || 0) > 0 && (
+                  <div className="flex items-center gap-1 text-gray-500 text-xs px-1 py-0.5" title={`${card.comments.length} komentar`}>
+                    <MessageSquare className="w-3 h-3 text-gray-400" />
+                    <span>{card.comments.length}</span>
                   </div>
                 )}
               </div>
