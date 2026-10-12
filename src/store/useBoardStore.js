@@ -101,7 +101,8 @@ export const useBoardStore = create(
                   cards: (list.cards || []).map(card => ({
                     ...card,
                     checklist: card.checklist || [],
-                    comments: card.comments || []
+                    comments: card.comments || [],
+                    attachments: card.attachments || []
                   }))
                 }))
               }));
@@ -370,6 +371,57 @@ export const useBoardStore = create(
             throw err;
           }
         },
+
+                // Upload Attachment to Card
+        uploadAttachment: async (boardId, listId, cardId, file) => {
+          try {
+            const res = await api.uploadCardAttachment(cardId, file);
+            const newAttachment = res?.data;
+            if (newAttachment) {
+              set(state => ({
+                boards: state.boards.map(b => ({
+                  ...b,
+                  lists: (b.lists || []).map(l => ({
+                    ...l,
+                    cards: (l.cards || []).map(c => 
+                      c.id == cardId 
+                        ? { ...c, attachments: [newAttachment, ...(c.attachments || [])] }
+                        : c
+                    )
+                  }))
+                }))
+              }));
+              return newAttachment;
+            }
+          } catch (err) {
+            console.error('Failed to upload attachment:', err);
+            throw err;
+          }
+        },
+
+        // Delete Attachment from Card
+        deleteAttachment: async (boardId, listId, cardId, attachmentId) => {
+          try {
+            await api.deleteCardAttachment(attachmentId);
+            set(state => ({
+              boards: state.boards.map(b => ({
+                ...b,
+                lists: (b.lists || []).map(l => ({
+                  ...l,
+                  cards: (l.cards || []).map(c => 
+                    c.id == cardId 
+                      ? { ...c, attachments: (c.attachments || []).filter(att => att.id != attachmentId) }
+                      : c
+                  )
+                }))
+              }))
+            }));
+          } catch (err) {
+            console.error('Failed to delete attachment:', err);
+            throw err;
+          }
+        },
+
 
         // Update User Profile
         updateUserProfile: async (data) => {

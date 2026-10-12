@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { AlignLeft, CheckSquare, Calendar, CheckCircle2, Edit3, MessageSquare } from 'lucide-react';
+import { AlignLeft, CheckSquare, Calendar, CheckCircle2, Edit3, MessageSquare, Paperclip } from 'lucide-react';
 import CardModal from './CardModal';
 import { useBoardStore } from '../store/useBoardStore';
 
@@ -106,6 +106,14 @@ export default function Card({ card, index, listId, isDragDisabled }) {
                   <div className="flex items-center gap-1 text-gray-500 text-xs px-1 py-0.5" title={`${card.comments.length} komentar`}>
                     <MessageSquare className="w-3 h-3 text-gray-400" />
                     <span>{card.comments.length}</span>
+                  </div>
+                )}
+
+                 {/* Badge Jumlah Lampiran File (📎) */}
+                {(card.attachments?.length || 0) > 0 && (
+                  <div className="flex items-center gap-1 text-gray-500 text-xs px-1 py-0.5" title={`${card.attachments.length} file lampiran`}>
+                    <Paperclip className="w-3 h-3 text-gray-400" />
+                    <span>{card.attachments.length}</span>
                   </div>
                 )}
               </div>

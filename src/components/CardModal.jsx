@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, CheckSquare, Tag, AlignLeft, Trash2, Calendar,
   Image as ImageIcon, Plus, CheckCircle2, User, Paperclip,
-  Activity, LayoutTemplate, ChevronDown, MessageSquare, Send
+  Activity, LayoutTemplate, ChevronDown, MessageSquare, Send,FileText,Download
 } from 'lucide-react';
 import { useBoardStore } from '../store/useBoardStore';
 import { api } from '../services/api';
@@ -42,6 +42,8 @@ export default function CardModal({ listId, card, onClose }) {
   const deleteCard = useBoardStore(s => s.deleteCard);
   const addComment = useBoardStore(s => s.addComment);
   const deleteComment = useBoardStore(s => s.deleteComment);
+  const uploadAttachment = useBoardStore(s => s.uploadAttachment); // <-- Tambahkan ini
+  const deleteAttachment = useBoardStore(s => s.deleteAttachment);
   const boards = useBoardStore(s => s.boards);
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const currentUser = useBoardStore(s => s.currentUser);
@@ -65,6 +67,40 @@ export default function CardModal({ listId, card, onClose }) {
   const [comments, setComments] = useState(card.comments || []);
   const [commentText, setCommentText] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
+  
+    // Attachment state
+  const [attachments, setAttachments] = useState(card.attachments || []);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadAttachment(activeBoardId, listId, card.id, file);
+      if (uploaded) {
+        setAttachments(prev => [uploaded, ...prev]);
+      }
+    } catch (err) {
+      alert('Gagal mengunggah file: ' + err.message);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!window.confirm('Hapus lampiran ini?')) return;
+    try {
+      await deleteAttachment(activeBoardId, listId, card.id, attachmentId);
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch (err) {
+      alert('Gagal menghapus lampiran: ' + err.message);
+    }
+  };
+
 
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') handleSave(); };
@@ -328,6 +364,92 @@ export default function CardModal({ listId, card, onClose }) {
                 </div>
               </div>
 
+                            {/* Seksi Lampiran File (Attachments) */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <SectionHeader icon={<Paperclip className="w-4 h-4 text-gray-500" />} title="Lampiran File" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#0052CC] bg-[#E9F2FF] hover:bg-[#D0E2FF] rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> {isUploading ? 'Mengunggah...' : 'Tambah Lampiran'}
+                  </button>
+                </div>
+
+                {/* Input file rahasia */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+
+                {/* Daftar File Lampiran */}
+                <div className="space-y-2">
+                  {attachments.length > 0 ? (
+                    attachments.map((att) => {
+                      const isImage = att.fileType?.startsWith('image/');
+                      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+                      const fileFullUrl = `${backendUrl}${att.filePath}`;
+                      const formattedSize = (att.fileSize / 1024).toFixed(1) + ' KB';
+
+                      return (
+                        <div
+                          key={att.id}
+                          className="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200/80 bg-white hover:bg-gray-50/80 transition-colors shadow-2xs group"
+                        >
+                          {/* Thumbnail / Ikon File */}
+                          <div className="w-14 h-12 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                            {isImage ? (
+                              <img src={fileFullUrl} alt={att.fileName} className="w-full h-full object-cover" />
+                            ) : (
+                              <FileText className="w-6 h-6 text-blue-500" />
+                            )}
+                          </div>
+
+                          {/* Info File */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-gray-800 truncate" title={att.fileName}>
+                              {att.fileName}
+                            </p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                              {formattedSize} • {att.createdAt ? new Date(att.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'baru saja'}
+                            </p>
+                          </div>
+
+                          {/* Tombol Aksi: Unduh & Hapus */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <a
+                              href={fileFullUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              download
+                              title="Buka / Unduh file"
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAttachment(att.id)}
+                              title="Hapus file lampiran"
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-gray-400 italic">Belum ada file lampiran pada kartu ini.</p>
+                  )}
+                </div>
+              </div>
+
+
               {/* Activity & Comments Discussion */}
               <div className="space-y-3 pt-2">
                 <SectionHeader icon={<MessageSquare className="w-4 h-4 text-gray-500" />} title="Aktivitas & Komentar" />
@@ -469,7 +591,7 @@ export default function CardModal({ listId, card, onClose }) {
                   <ActionButton
                     icon={<Paperclip className="w-4 h-4 text-gray-500" />}
                     label="Attachment"
-                    onClick={() => {}}
+                      onClick={() => fileInputRef.current?.click()}
                   />
                 </div>
               </div>

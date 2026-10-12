@@ -144,4 +144,29 @@ export const api = {
     request(`/comments/${commentId}`, {
       method: 'DELETE',
     }),
+    // 7. Attachments (Upload & Delete)
+  uploadCardAttachment: async (cardId, file) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/cards/${cardId}/attachments`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(data?.error || data?.message || `HTTP ${response.status}`);
+    }
+    return data;
+  },
+  deleteCardAttachment: (attachmentId) =>
+    request(`/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    }),
+
 };
