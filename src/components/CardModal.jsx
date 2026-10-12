@@ -42,8 +42,9 @@ export default function CardModal({ listId, card, onClose }) {
   const deleteCard = useBoardStore(s => s.deleteCard);
   const addComment = useBoardStore(s => s.addComment);
   const deleteComment = useBoardStore(s => s.deleteComment);
-  const uploadAttachment = useBoardStore(s => s.uploadAttachment); // <-- Tambahkan ini
+  const uploadAttachment = useBoardStore(s => s.uploadAttachment);
   const deleteAttachment = useBoardStore(s => s.deleteAttachment);
+  const assignCard = useBoardStore(s => s.assignCard);
   const boards = useBoardStore(s => s.boards);
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const currentUser = useBoardStore(s => s.currentUser);
@@ -98,6 +99,22 @@ export default function CardModal({ listId, card, onClose }) {
       setAttachments(prev => prev.filter(a => a.id !== attachmentId));
     } catch (err) {
       alert('Gagal menghapus lampiran: ' + err.message);
+    }
+  };
+
+  // Card Assignee State
+  const [assigneeId, setAssigneeId] = useState(card.assigneeId || null);
+  const [assigneeName, setAssigneeName] = useState(card.assigneeName || '');
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
+
+  const handleSelectAssignee = async (memId, memName) => {
+    try {
+      await assignCard(activeBoardId, listId, card.id, memId, memName);
+      setAssigneeId(memId);
+      setAssigneeName(memName);
+      setShowMemberPicker(false);
+    } catch (err) {
+      alert('Gagal menugaskan anggota: ' + err.message);
     }
   };
 
@@ -525,18 +542,91 @@ export default function CardModal({ listId, card, onClose }) {
 
             {/* Right Column */}
             <div className="w-44 shrink-0 flex flex-col gap-4">
-              {/* Members */}
-              <div>
+              {/* Members (Penugasan Anggota) */}
+              <div className="relative">
                 <p className="text-xs font-bold text-[#44546F] uppercase tracking-wider mb-2">Members</p>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name}&backgroundColor=b6e3f4`}
-                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm"
-                    alt="member"
-                    title={currentUser?.name}
-                  />
-                </div>
-                <ActionButton icon={<User className="w-4 h-4 text-gray-500" />} label="Members" />
+                
+                {/* Tampilan Anggota yang Ditugaskan */}
+                {assigneeName ? (
+                  <div className="flex items-center gap-2 mb-2 p-1.5 bg-blue-50 border border-blue-200 rounded-xl">
+                    <img
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${assigneeName}&backgroundColor=b6e3f4`}
+                      className="w-7 h-7 rounded-full border border-blue-300 shadow-xs"
+                      alt={assigneeName}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-800 truncate">{assigneeName}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAssignee(null, '')}
+                      title="Batalkan penugasan"
+                      className="text-gray-400 hover:text-red-500 p-1 rounded-md cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic mb-2">Belum ada yang ditugaskan</p>
+                )}
+
+                <ActionButton
+                  icon={<User className="w-4 h-4 text-gray-500" />}
+                  label={assigneeName ? "Ganti Anggota" : "Tugaskan Anggota"}
+                  onClick={() => setShowMemberPicker(prev => !prev)}
+                />
+
+                {/* Popover Pilihan Anggota Board */}
+                {showMemberPicker && (
+                  <div className="absolute top-full left-0 mt-1 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-30 p-2 space-y-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 py-1">Pilih Anggota</p>
+                    
+                    {/* Opsi Tugaskan ke Saya */}
+                    {currentUser && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAssignee(currentUser.id, currentUser.name)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg hover:bg-blue-50 text-gray-700 transition-colors cursor-pointer text-left font-medium"
+                      >
+                        <img
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}&backgroundColor=b6e3f4`}
+                          className="w-5 h-5 rounded-full"
+                          alt="me"
+                        />
+                        <span className="truncate">Tugaskan ke Saya</span>
+                      </button>
+                    )}
+
+                    {/* Anggota Lain di Board */}
+                    {(activeBoard?.members || []).map((m) => (
+                      <button
+                        key={m.userId}
+                        type="button"
+                        onClick={() => handleSelectAssignee(m.userId, m.userName)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-xs rounded-lg hover:bg-gray-100 text-gray-700 transition-colors cursor-pointer text-left"
+                      >
+                        <img
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userName || 'user'}&backgroundColor=b6e3f4`}
+                          className="w-5 h-5 rounded-full"
+                          alt={m.userName}
+                        />
+                        <span className="truncate flex-1">{m.userName}</span>
+                        <span className="text-[9px] text-gray-400 capitalize">{m.role}</span>
+                      </button>
+                    ))}
+
+                    {/* Opsi Kosongkan */}
+                    {assigneeName && (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAssignee(null, '')}
+                        className="w-full text-center py-1 text-[11px] text-red-500 hover:bg-red-50 rounded-lg transition-colors cursor-pointer mt-1 border-t border-gray-100 font-semibold"
+                      >
+                        Hapus Penugasan
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Labels */}

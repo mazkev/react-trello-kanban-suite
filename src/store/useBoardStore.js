@@ -422,6 +422,94 @@ export const useBoardStore = create(
           }
         },
 
+                // Invite Member to Board
+        inviteMember: async (boardId, email, role) => {
+          try {
+            const res = await api.inviteBoardMember(boardId, email, role);
+            const newMember = res?.data;
+            if (newMember) {
+              set(state => ({
+                boards: state.boards.map(b => 
+                  b.id == boardId
+                    ? { ...b, members: [...(b.members || []), newMember] }
+                    : b
+                )
+              }));
+              return newMember;
+            }
+          } catch (err) {
+            console.error('Failed to invite member:', err);
+            throw err;
+          }
+        },
+
+        // Update Member Role (admin, member, viewer)
+        updateMemberRole: async (boardId, userId, newRole) => {
+          try {
+            await api.updateBoardMemberRole(boardId, userId, newRole);
+            set(state => ({
+              boards: state.boards.map(b => 
+                b.id == boardId
+                  ? {
+                      ...b,
+                      members: (b.members || []).map(m => 
+                        m.userId == userId ? { ...m, role: newRole } : m
+                      )
+                    }
+                  : b
+              )
+            }));
+          } catch (err) {
+            console.error('Failed to update member role:', err);
+            throw err;
+          }
+        },
+
+        // Remove Member from Board
+        removeMember: async (boardId, userId) => {
+          try {
+            await api.removeBoardMember(boardId, userId);
+            set(state => ({
+              boards: state.boards.map(b => 
+                b.id == boardId
+                  ? {
+                      ...b,
+                      members: (b.members || []).filter(m => m.userId != userId)
+                    }
+                  : b
+              )
+            }));
+          } catch (err) {
+            console.error('Failed to remove member:', err);
+            throw err;
+          }
+        },
+
+        // Assign Member to Card
+        assignCard: async (boardId, listId, cardId, assigneeId, assigneeName) => {
+          try {
+            const res = await api.assignCardMember(cardId, assigneeId, assigneeName);
+            const updatedCard = res?.data;
+            set(state => ({
+              boards: state.boards.map(b => ({
+                ...b,
+                lists: (b.lists || []).map(l => ({
+                  ...l,
+                  cards: (l.cards || []).map(c => 
+                    c.id == cardId 
+                      ? { ...c, assigneeId, assigneeName }
+                      : c
+                  )
+                }))
+              }))
+            }));
+            return updatedCard;
+          } catch (err) {
+            console.error('Failed to assign card:', err);
+            throw err;
+          }
+        },
+
 
         // Update User Profile
         updateUserProfile: async (data) => {

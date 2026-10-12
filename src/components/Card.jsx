@@ -118,15 +118,17 @@ export default function Card({ card, index, listId, isDragDisabled }) {
                 )}
               </div>
 
-              {/* Member avatars */}
-              <div className="flex items-center justify-end mt-1.5 gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.name || 'user'}&backgroundColor=b6e3f4`}
-                  alt="member"
-                  className="w-6 h-6 rounded-full border border-gray-200 bg-blue-100"
-                  title={currentUser?.name}
-                />
-              </div>
+              {/* Member assignee avatar */}
+              {card.assigneeName && (
+                <div className="flex items-center justify-end mt-1.5 gap-1">
+                  <img
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${card.assigneeName}&backgroundColor=b6e3f4`}
+                    alt={card.assigneeName}
+                    className="w-6 h-6 rounded-full border border-blue-200 bg-blue-100 shadow-2xs"
+                    title={`Ditugaskan ke: ${card.assigneeName}`}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Edit button overlay */}

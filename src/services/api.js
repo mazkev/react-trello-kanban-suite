@@ -169,4 +169,28 @@ export const api = {
       method: 'DELETE',
     }),
 
+      // 8. Board Members & RBAC Collaboration
+  getBoardMembers: (boardId) => request(`/boards/${boardId}/members`),
+  inviteBoardMember: (boardId, email, role = 'member') =>
+    request(`/boards/${boardId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    }),
+  updateBoardMemberRole: (boardId, userId, role) =>
+    request(`/boards/${boardId}/members/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+  removeBoardMember: (boardId, userId) =>
+    request(`/boards/${boardId}/members/${userId}`, {
+      method: 'DELETE',
+    }),
+
+  // 9. Card Member Assignment
+  assignCardMember: (cardId, assigneeId, assigneeName) =>
+    request(`/cards/${cardId}/assign`, {
+      method: 'PUT',
+      body: JSON.stringify({ assigneeId, assigneeName }),
+    }),
+
 };

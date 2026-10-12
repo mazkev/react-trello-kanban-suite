@@ -3,7 +3,7 @@ import {
   Search, Bell, HelpCircle, Settings, ChevronDown,
   LayoutDashboard, Zap, BarChart3, Calendar, Menu, X,
   Plus, LayoutTemplate, Edit2, Trash2, LogOut, ChevronLeft, ChevronRight,
-  Star, BookOpen
+  Star, BookOpen, UserPlus
 } from 'lucide-react';
 import Board from './components/Board';
 import Statistics from './components/Statistics';
@@ -13,6 +13,7 @@ import Landing from './components/Landing';
 import Login from './components/Login';
 import SettingsModal from './components/SettingsModal';
 import { useBoardStore } from './store/useBoardStore';
+import MembersModal from './components/MembersModal';
 
 const BG_MAP = {
   'blue':    { css: 'background: #0079BF;', type: 'color' },
@@ -796,6 +797,7 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingHeaderTitle, setEditingHeaderTitle] = useState(false);
   const [headerTitle, setHeaderTitle] = useState('');
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false); 
 
   useEffect(() => {
     fetchBoards();
@@ -880,6 +882,28 @@ function Dashboard() {
                 >
                   <span>{(starredBoardIds || []).some(id => id == activeBoardId) ? '⭐' : '☆'}</span> {(starredBoardIds || []).some(id => id == activeBoardId) ? 'Starred' : 'Star'}
                 </button>
+                   {/* Pemisah & Tombol Share Anggota (RBAC) */}
+                <div className="w-px h-5 bg-white/30 mx-1" />
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1.5 overflow-hidden">
+                    {(activeBoard?.members || []).slice(0, 3).map((m) => (
+                      <img
+                        key={m.userId}
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userName || 'user'}&backgroundColor=b6e3f4`}
+                        alt={m.userName}
+                        title={`${m.userName} (${m.role})`}
+                        className="w-7 h-7 rounded-full border-2 border-white/70 bg-blue-100 shadow-xs"
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setIsMembersModalOpen(true)}
+                    className="trello-btn text-sm flex items-center gap-1.5 h-8 px-3 bg-white/20 hover:bg-white/30 text-white font-medium transition-colors shadow-xs"
+                    title="Kelola anggota board & perannya (Admin/Member/Viewer)"
+                  >
+                    <UserPlus className="w-4 h-4" /> Share
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
@@ -917,6 +941,12 @@ function Dashboard() {
 
       {/* Global Settings & Preferences Modal */}
       <SettingsModal />
+        {/* Members & RBAC Modal */}
+      <MembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        board={activeBoard}
+      />
     </div>
   );
 }
