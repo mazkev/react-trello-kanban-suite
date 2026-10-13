@@ -3,7 +3,7 @@ import {
   Search, Bell, HelpCircle, Settings, ChevronDown,
   LayoutDashboard, Zap, BarChart3, Calendar, Menu, X,
   Plus, LayoutTemplate, Edit2, Trash2, LogOut, ChevronLeft, ChevronRight,
-  Star, BookOpen, UserPlus
+  Star, BookOpen, UserPlus, UserCheck, MessageSquare, AlertCircle, CheckCheck
 } from 'lucide-react';
 import Board from './components/Board';
 import Statistics from './components/Statistics';
@@ -14,6 +14,7 @@ import Login from './components/Login';
 import SettingsModal from './components/SettingsModal';
 import { useBoardStore } from './store/useBoardStore';
 import MembersModal from './components/MembersModal';
+import CardModal from './components/CardModal';
 
 const BG_MAP = {
   'blue':    { css: 'background: #0079BF;', type: 'color' },
@@ -88,11 +89,13 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
   const [selectedColor, setSelectedColor] = useState('from-blue-500 to-indigo-500');
   const [isCreating, setIsCreating] = useState(false);
 
-  const notifications = [
-    { id: 1, text: 'Kevin moved "Design landing page" to Done', time: '2m ago', read: false },
-    { id: 2, text: 'You have a card due today: Database migration', time: '1h ago', read: false },
-    { id: 3, text: 'New comment on "Implement Auth"', time: '3h ago', read: true },
-  ];
+  // Dynamic Notifications from Store
+  const rawNotifications = useBoardStore(s => s.notifications);
+  const notifications = Array.isArray(rawNotifications) ? rawNotifications : [];
+  const markNotificationAsRead = useBoardStore(s => s.markNotificationAsRead);
+  const markAllNotificationsAsRead = useBoardStore(s => s.markAllNotificationsAsRead);
+  const clearNotifications = useBoardStore(s => s.clearNotifications);
+  const openCardModal = useBoardStore(s => s.openCardModal);
   const unread = notifications.filter(n => !n.read).length;
 
   const toggleMenu = (name) => {
@@ -440,20 +443,107 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
 
           {activeDropdown === 'notif' && (
             <div className="absolute right-0 top-full mt-1.5 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
-                <span className="text-xs text-blue-600 font-medium">Tandai sudah dibaca</span>
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/90">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-gray-800 text-sm">Notifications</h3>
+                  {unread > 0 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">
+                      {unread} baru
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {unread > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => markAllNotificationsAsRead()}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+                    >
+                      Tandai dibaca
+                    </button>
+                  )}
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => clearNotifications()}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                      title="Bersihkan notifikasi"
+                    >
+                      Bersihkan
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                {notifications.map(n => (
-                  <div key={n.id} className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${!n.read ? 'bg-blue-50/40' : ''}`}>
-                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.read ? 'bg-blue-500' : 'bg-transparent'}`} />
-                    <div className="flex-1">
-                      <p className="text-xs text-gray-700 leading-snug">{n.text}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{n.time}</p>
-                    </div>
+
+              <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="p-8 text-center text-gray-400">
+                    <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300 opacity-60" />
+                    <p className="text-xs font-semibold text-gray-600">Tidak ada notifikasi baru</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Semua tugas dan aktivitas tim terpantau rapi.</p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map(n => {
+                    let IconComp = Bell;
+                    let iconBg = 'bg-blue-100 text-blue-600';
+                    if (n.type === 'assignment') {
+                      IconComp = UserCheck;
+                      iconBg = 'bg-indigo-100 text-indigo-600';
+                    } else if (n.type === 'due_date') {
+                      IconComp = AlertCircle;
+                      iconBg = 'bg-amber-100 text-amber-600';
+                    } else if (n.type === 'comment') {
+                      IconComp = MessageSquare;
+                      iconBg = 'bg-emerald-100 text-emerald-600';
+                    } else if (n.type === 'board_invite') {
+                      IconComp = UserPlus;
+                      iconBg = 'bg-purple-100 text-purple-600';
+                    }
+
+                    return (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          markNotificationAsRead(n.id);
+                          if (n.cardId) {
+                            openCardModal(n.cardId);
+                            setActiveDropdown(null);
+                          }
+                        }}
+                        className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors ${
+                          !n.read ? 'bg-blue-50/40' : ''
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
+                          <IconComp className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className={`text-xs leading-snug truncate ${!n.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                              {n.title}
+                            </p>
+                            {!n.read && (
+                              <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">
+                            {n.message}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-[10px] text-gray-400">
+                              {n.time || 'Baru saja'}
+                            </span>
+                            {n.cardId && (
+                              <span className="text-[10px] text-blue-600 font-semibold hover:underline">
+                                Buka kartu →
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -791,6 +881,9 @@ function Dashboard() {
   const boards = useBoardStore(s => s.boards);
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const fetchBoards = useBoardStore(s => s.fetchBoards);
+  const checkDueDateNotifications = useBoardStore(s => s.checkDueDateNotifications);
+  const activeModalCard = useBoardStore(s => s.activeModalCard);
+  const closeCardModal = useBoardStore(s => s.closeCardModal);
   const renameBoard = useBoardStore(s => s.renameBoard);
   const deleteBoard = useBoardStore(s => s.deleteBoard);
   const rawStarredBoardIds = useBoardStore(s => s.starredBoardIds);
@@ -803,6 +896,7 @@ function Dashboard() {
 
   useEffect(() => {
     fetchBoards();
+    checkDueDateNotifications();
   }, []);
 
   const activeBoard = boards.find(b => b.id == activeBoardId);
@@ -949,6 +1043,15 @@ function Dashboard() {
         onClose={() => setIsMembersModalOpen(false)}
         board={activeBoard}
       />
+
+      {/* Global Card Modal from Notifications or Deep Links */}
+      {activeModalCard && (
+        <CardModal
+          listId={activeModalCard.listId}
+          card={activeModalCard.card}
+          onClose={() => closeCardModal()}
+        />
+      )}
     </div>
   );
 }

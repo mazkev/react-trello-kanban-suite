@@ -61,6 +61,18 @@ export const useBoardStore = create(
         currentUser: { name: 'Kevin P.', email: 'kevin@example.com' },
         isSettingsOpen: false,
         starredBoardIds: [],
+        notifications: [
+          {
+            id: 'notif-welcome',
+            title: 'Selamat Datang di Kanban Suite!',
+            message: 'Papan kolaborasi siap digunakan bersama tim.',
+            type: 'info',
+            time: 'Baru saja',
+            createdAt: new Date().toISOString(),
+            read: false,
+          }
+        ],
+        activeModalCard: null,
         workflows: [
           { id: 1, title: 'Auto-Complete Tasks', trigger: 'When a card is moved to "Done" list', action: 'Mark task status as completed', active: true, color: 'bg-green-500' },
           { id: 2, title: 'Stale Card Alert', trigger: 'When a card sits in "In Progress" for 3 days', action: 'Add red label & notify members', active: false, color: 'bg-red-500' },
@@ -86,6 +98,84 @@ export const useBoardStore = create(
         toggleWorkflow: (id) => set(state => ({
           workflows: state.workflows.map(w => w.id === id ? { ...w, active: !w.active } : w)
         })),
+
+        // === 🔔 NOTIFICATION SYSTEM ACTIONS ===
+        addNotification: ({ title, message, type = 'info', cardId = null, boardId = null, id = null }) => set(state => {
+          const newNotif = {
+            id: id || generateId(),
+            title,
+            message,
+            type,
+            cardId,
+            boardId,
+            time: 'Baru saja',
+            createdAt: new Date().toISOString(),
+            read: false
+          };
+          // Batasi maksimal 30 notifikasi terbaru
+          return {
+            notifications: [newNotif, ...(state.notifications || [])].slice(0, 30)
+          };
+        }),
+
+        markNotificationAsRead: (id) => set(state => ({
+          notifications: (state.notifications || []).map(n => n.id === id ? { ...n, read: true } : n)
+        })),
+
+        markAllNotificationsAsRead: () => set(state => ({
+          notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
+        })),
+
+        clearNotifications: () => set({ notifications: [] }),
+
+        openCardModal: (cardId) => {
+          const state = get();
+          for (const board of state.boards) {
+            for (const list of (board.lists || [])) {
+              const foundCard = (list.cards || []).find(c => c.id == cardId);
+              if (foundCard) {
+                set({ 
+                  activeBoardId: board.id,
+                  currentView: 'board',
+                  activeModalCard: { listId: list.id, card: foundCard } 
+                });
+                return;
+              }
+            }
+          }
+        },
+
+        closeCardModal: () => set({ activeModalCard: null }),
+
+        checkDueDateNotifications: () => {
+          const state = get();
+          const todayStr = new Date().toISOString().split('T')[0];
+          
+          state.boards.forEach(board => {
+            (board.lists || []).forEach(list => {
+              (list.cards || []).forEach(card => {
+                if (card.dueDate && !card.checked) {
+                  const isOverdue = card.dueDate < todayStr;
+                  const isToday = card.dueDate === todayStr;
+                  if (isOverdue || isToday) {
+                    const notifId = `due-${card.id}-${card.dueDate}`;
+                    const alreadyExists = (state.notifications || []).some(n => n.id === notifId);
+                    if (!alreadyExists) {
+                      get().addNotification({
+                        id: notifId,
+                        title: isOverdue ? '⚠️ Kartu Terlewat Deadline' : '⏰ Jatuh Tempo Hari Ini',
+                        message: `Kartu "${card.content}" ${isOverdue ? 'telah melewati batas waktu' : 'harus diselesaikan hari ini'}!`,
+                        type: 'due_date',
+                        cardId: card.id,
+                        boardId: board.id,
+                      });
+                    }
+                  }
+                }
+              });
+            });
+          });
+        },
 
         // === 🚀 GO BACKEND INTEGRATION ACTIONS ===
 
@@ -341,6 +431,14 @@ export const useBoardStore = create(
                   }))
                 }))
               }));
+              // Trigger Notifikasi Komentar
+              get().addNotification({
+                title: 'Komentar Baru',
+                message: `Komentar baru ditambahkan pada kartu tugas`,
+                type: 'comment',
+                cardId,
+                boardId: get().activeBoardId,
+              });
               return res.data;
             }
           } catch (err) {
@@ -435,6 +533,13 @@ export const useBoardStore = create(
                     : b
                 )
               }));
+              // Trigger Notifikasi Kolaborator Baru
+              get().addNotification({
+                title: 'Anggota Baru Diundang',
+                message: `${email} telah diundang ke papan sebagai ${role}`,
+                type: 'board_invite',
+                boardId,
+              });
               return newMember;
             }
           } catch (err) {
@@ -503,6 +608,16 @@ export const useBoardStore = create(
                 }))
               }))
             }));
+            // Trigger Notifikasi Penugasan Kartu
+            if (assigneeName) {
+              get().addNotification({
+                title: 'Penugasan Kartu Tugas',
+                message: `${assigneeName} ditugaskan ke kartu tugas`,
+                type: 'assignment',
+                cardId,
+                boardId,
+              });
+            }
             return updatedCard;
           } catch (err) {
             console.error('Failed to assign card:', err);
@@ -546,6 +661,7 @@ export const useBoardStore = create(
         currentUser: state.currentUser,
         workflows: state.workflows,
         starredBoardIds: state.starredBoardIds,
+        notifications: state.notifications,
       })
     }
   )
