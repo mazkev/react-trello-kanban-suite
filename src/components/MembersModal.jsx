@@ -29,7 +29,10 @@ export default function MembersModal({ isOpen, onClose, board }) {
 
   // Fetch members dari API saat modal dibuka
   const loadMembers = async () => {
-    if (!board?.id) return;
+    if (!board?.id || isNaN(Number(board.id))) {
+      setMembers(board?.members || []);
+      return;
+    }
     try {
       const res = await api.getBoardMembers(board.id);
       if (res?.data) {
@@ -53,6 +56,11 @@ export default function MembersModal({ isOpen, onClose, board }) {
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
+
+    if (!board?.id || isNaN(Number(board.id))) {
+      setErrorMsg('Papan ini adalah papan demo lokal. Silakan pilih atau buat papan baru dari backend untuk mengundang anggota.');
+      return;
+    }
 
     setLoading(true);
     setErrorMsg('');

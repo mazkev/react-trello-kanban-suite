@@ -25,10 +25,10 @@ function StatCard({ icon, label, value, color }) {
 }
 
 export default function Statistics() {
-  const lists = useBoardStore((state) => {
-    const activeBoard = state.boards.find(b => b.id == state.activeBoardId);
-    return activeBoard ? (activeBoard.lists || []) : [];
-  });
+  const boards = useBoardStore(s => s.boards);
+  const activeBoardId = useBoardStore(s => s.activeBoardId);
+  const activeBoard = boards.find(b => b.id == activeBoardId);
+  const lists = activeBoard?.lists || [];
 
   const totalCards = lists.reduce((acc, list) => acc + (list.cards || []).length, 0);
   const completedCards = lists.reduce((acc, list) => acc + (list.cards || []).filter(c => c.checked).length, 0);

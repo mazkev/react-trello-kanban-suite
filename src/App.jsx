@@ -72,7 +72,8 @@ function GlobalNav({ onToggleSidebar, sidebarOpen }) {
   const activeBoardId = useBoardStore(s => s.activeBoardId);
   const setActiveBoard = useBoardStore(s => s.setActiveBoard);
   const createBoard = useBoardStore(s => s.createBoard);
-  const starredBoardIds = useBoardStore(s => s.starredBoardIds || []);
+  const rawStarredBoardIds = useBoardStore(s => s.starredBoardIds);
+  const starredBoardIds = Array.isArray(rawStarredBoardIds) ? rawStarredBoardIds : [];
   const toggleStarredBoard = useBoardStore(s => s.toggleStarredBoard);
   const setCurrentView = useBoardStore(s => s.setCurrentView);
   const setIsSettingsOpen = useBoardStore(s => s.setIsSettingsOpen);
@@ -792,7 +793,8 @@ function Dashboard() {
   const fetchBoards = useBoardStore(s => s.fetchBoards);
   const renameBoard = useBoardStore(s => s.renameBoard);
   const deleteBoard = useBoardStore(s => s.deleteBoard);
-  const starredBoardIds = useBoardStore(s => s.starredBoardIds || []);
+  const rawStarredBoardIds = useBoardStore(s => s.starredBoardIds);
+  const starredBoardIds = Array.isArray(rawStarredBoardIds) ? rawStarredBoardIds : [];
   const toggleStarredBoard = useBoardStore(s => s.toggleStarredBoard);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [editingHeaderTitle, setEditingHeaderTitle] = useState(false);

@@ -5,10 +5,10 @@ import List from './List';
 import { useBoardStore } from '../store/useBoardStore';
 
 export default function Board() {
-  const lists = useBoardStore((state) => {
-    const activeBoard = state.boards.find(b => b.id == state.activeBoardId);
-    return activeBoard ? (activeBoard.lists || []) : [];
-  });
+  const boards = useBoardStore(s => s.boards);
+  const activeBoardId = useBoardStore(s => s.activeBoardId);
+  const activeBoard = boards.find(b => b.id == activeBoardId);
+  const lists = activeBoard?.lists || [];
   const addList = useBoardStore(s => s.addList);
   const moveList = useBoardStore(s => s.moveList);
   const moveCard = useBoardStore(s => s.moveCard);
