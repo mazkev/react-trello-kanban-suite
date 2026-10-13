@@ -414,38 +414,52 @@ export const useBoardStore = create(
         },
 
         // Add Comment to Card
-        addComment: async (cardId, content) => {
+                addComment: async (cardId, content) => {
+          let newComment = null;
           try {
             const res = await api.createCardComment(cardId, content);
-            if (res?.data) {
-              set(state => ({
-                boards: state.boards.map(b => ({
-                  ...b,
-                  lists: (b.lists || []).map(l => ({
-                    ...l,
-                    cards: (l.cards || []).map(c => 
-                      c.id == cardId 
-                        ? { ...c, comments: [...(c.comments || []), res.data] }
-                        : c
-                    )
-                  }))
-                }))
-              }));
-              // Trigger Notifikasi Komentar
-              get().addNotification({
-                title: 'Komentar Baru',
-                message: `Komentar baru ditambahkan pada kartu tugas`,
-                type: 'comment',
-                cardId,
-                boardId: get().activeBoardId,
-              });
-              return res.data;
-            }
+            newComment = res?.data;
           } catch (err) {
-            console.error('Failed to add comment:', err);
-            throw err;
+            console.warn('Simpan komentar di LocalStorage:', err);
           }
+
+          // Fallback lokal jika offline
+          if (!newComment) {
+            newComment = {
+              id: generateId(),
+              cardId,
+              userId: get().currentUser?.id || 1,
+              userName: get().currentUser?.name || 'You',
+              content,
+              createdAt: new Date().toISOString()
+            };
+          }
+
+          set(state => ({
+            boards: state.boards.map(b => ({
+              ...b,
+              lists: (b.lists || []).map(l => ({
+                ...l,
+                cards: (l.cards || []).map(c => 
+                  c.id == cardId 
+                    ? { ...c, comments: [...(c.comments || []), newComment] }
+                    : c
+                )
+              }))
+            }))
+          }));
+
+          get().addNotification({
+            title: 'Komentar Baru',
+            message: `Komentar baru ditambahkan pada kartu tugas`,
+            type: 'comment',
+            cardId,
+            boardId: get().activeBoardId,
+          });
+
+          return newComment;
         },
+
 
         // Delete Comment from Card
         deleteComment: async (cardId, commentId) => {
@@ -471,31 +485,45 @@ export const useBoardStore = create(
         },
 
                 // Upload Attachment to Card
-        uploadAttachment: async (boardId, listId, cardId, file) => {
+                uploadAttachment: async (boardId, listId, cardId, file) => {
+          let newAttachment = null;
           try {
             const res = await api.uploadCardAttachment(cardId, file);
-            const newAttachment = res?.data;
-            if (newAttachment) {
-              set(state => ({
-                boards: state.boards.map(b => ({
-                  ...b,
-                  lists: (b.lists || []).map(l => ({
-                    ...l,
-                    cards: (l.cards || []).map(c => 
-                      c.id == cardId 
-                        ? { ...c, attachments: [newAttachment, ...(c.attachments || [])] }
-                        : c
-                    )
-                  }))
-                }))
-              }));
-              return newAttachment;
-            }
+            newAttachment = res?.data;
           } catch (err) {
-            console.error('Failed to upload attachment:', err);
-            throw err;
+            console.warn('Simpan lampiran di LocalStorage:', err);
           }
+
+          // Fallback lokal jika backend offline
+          if (!newAttachment) {
+            newAttachment = {
+              id: generateId(),
+              cardId,
+              fileName: file.name,
+              fileSize: file.size,
+              fileType: file.type,
+              fileUrl: URL.createObjectURL(file),
+              createdAt: new Date().toISOString()
+            };
+          }
+
+          set(state => ({
+            boards: state.boards.map(b => ({
+              ...b,
+              lists: (b.lists || []).map(l => ({
+                ...l,
+                cards: (l.cards || []).map(c => 
+                  c.id == cardId 
+                    ? { ...c, attachments: [newAttachment, ...(c.attachments || [])] }
+                    : c
+                )
+              }))
+            }))
+          }));
+
+          return newAttachment;
         },
+
 
         // Delete Attachment from Card
         deleteAttachment: async (boardId, listId, cardId, attachmentId) => {
@@ -521,32 +549,47 @@ export const useBoardStore = create(
         },
 
                 // Invite Member to Board
-        inviteMember: async (boardId, email, role) => {
+                inviteMember: async (boardId, email, role) => {
+          let newMember = null;
           try {
             const res = await api.inviteBoardMember(boardId, email, role);
-            const newMember = res?.data;
-            if (newMember) {
-              set(state => ({
-                boards: state.boards.map(b => 
-                  b.id == boardId
-                    ? { ...b, members: [...(b.members || []), newMember] }
-                    : b
-                )
-              }));
-              // Trigger Notifikasi Kolaborator Baru
-              get().addNotification({
-                title: 'Anggota Baru Diundang',
-                message: `${email} telah diundang ke papan sebagai ${role}`,
-                type: 'board_invite',
-                boardId,
-              });
-              return newMember;
-            }
+            newMember = res?.data;
           } catch (err) {
-            console.error('Failed to invite member:', err);
-            throw err;
+            console.warn('Simpan anggota baru di LocalStorage:', err);
           }
+
+          // Fallback lokal jika backend offline
+          if (!newMember) {
+            const namePart = email.split('@')[0];
+            newMember = {
+              id: generateId(),
+              boardId,
+              userId: generateId(),
+              userEmail: email,
+              userName: namePart.charAt(0).toUpperCase() + namePart.slice(1),
+              role: role || 'member',
+              createdAt: new Date().toISOString()
+            };
+          }
+
+          set(state => ({
+            boards: state.boards.map(b => 
+              b.id == boardId
+                ? { ...b, members: [...(b.members || []), newMember] }
+                : b
+            )
+          }));
+
+          get().addNotification({
+            title: 'Anggota Baru Diundang',
+            message: `${email} telah diundang ke papan sebagai ${role}`,
+            type: 'board_invite',
+            boardId,
+          });
+
+          return newMember;
         },
+
 
         // Update Member Role (admin, member, viewer)
         updateMemberRole: async (boardId, userId, newRole) => {

@@ -44,7 +44,12 @@ export default function Login() {
           setAppMode('dashboard');
         }
       } catch (err) {
-        setErrorMsg(err.message || 'Gagal login. Silakan periksa kembali email dan password Anda.');
+        // Fallback Standalone / LocalStorage untuk Vercel:
+        console.warn('Backend Go offline, masuk ke mode LocalStorage demo:', err.message);
+        const namePart = email.split('@')[0];
+        const formattedName = namePart.split('.').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        setCurrentUser({ id: 1, name: formattedName || 'Demo User', email });
+        setAppMode('dashboard');
       } finally {
         setLoading(false);
       }

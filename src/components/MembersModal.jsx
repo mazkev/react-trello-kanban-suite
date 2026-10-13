@@ -28,20 +28,24 @@ export default function MembersModal({ isOpen, onClose, board }) {
   const isAdmin = isOwner || currentMember?.role === 'admin';
 
   // Fetch members dari API saat modal dibuka
-  const loadMembers = async () => {
-    if (!board?.id || isNaN(Number(board.id))) {
-      setMembers(board?.members || []);
-      return;
+    const loadMembers = async () => {
+    // Utamakan anggota yang sudah ada di board lokal lebih dulu
+    if (board?.members && board.members.length > 0) {
+      setMembers(board.members);
     }
+
+    if (!board?.id || isNaN(Number(board.id))) return;
+
     try {
       const res = await api.getBoardMembers(board.id);
       if (res?.data) {
         setMembers(res.data);
       }
     } catch (err) {
-      console.warn('Gagal memuat anggota:', err.message);
+      console.warn('Gagal memuat anggota via API, menggunakan data lokal:', err.message);
     }
   };
+
 
   useEffect(() => {
     if (isOpen) {
